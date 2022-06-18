@@ -79,7 +79,6 @@ namespace ultrabus {
             return -1;
         }
 
-        conn_addr = "";
         this->private_connection = private_connection;
 
         // Connect to the bus
@@ -113,15 +112,12 @@ namespace ultrabus {
 
         // Connect to the bus
         //
-        conn_addr = bus_address;
         if (private_connection)
-            conn = dbus_connection_open_private (conn_addr.c_str(), nullptr);
+            conn = dbus_connection_open_private (bus_address.c_str(), nullptr);
         else
-            conn = dbus_connection_open (conn_addr.c_str(), nullptr);
-        if (!conn) {
-            conn_addr = "";
+            conn = dbus_connection_open (bus_address.c_str(), nullptr);
+        if (!conn)
             return -1;
-        }
 
         dbus_connection_set_exit_on_disconnect (conn, exit_on_disconnect);
 
@@ -131,7 +127,6 @@ namespace ultrabus {
             if (private_connection)
                 dbus_connection_close (conn);
             dbus_connection_unref (conn);
-            conn_addr = "";
             conn = nullptr;
             return -1;
         }
@@ -179,7 +174,6 @@ namespace ultrabus {
         }
 
         conn = nullptr;
-        conn_addr = "";
         private_connection = false;
     }
 

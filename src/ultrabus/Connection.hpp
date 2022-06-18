@@ -122,7 +122,6 @@ namespace ultrabus {
 
     private:
         DBusConnection* conn;
-        std::string conn_addr;
         bool private_connection;
 
         std::mutex pending_mutex;
