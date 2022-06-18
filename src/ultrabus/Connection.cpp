@@ -265,7 +265,10 @@ namespace ultrabus {
         if (callback) {
             Message reply (dbus_pending_call_steal_reply(pending));
             reply.dec_ref (); // ref count increased in Message constructor
+            dbus_pending_call_unref (pending);
             callback (reply);
+        }else{
+            dbus_pending_call_unref (pending);
         }
     }
 
