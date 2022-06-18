@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -30,6 +30,7 @@ struct appargs_t {
     void print_usage_and_exit (std::ostream& out, int exit_code);
 
     DBusBusType bus;
+    std::string bus_address;
 
     std::string cmd;
     std::string service;

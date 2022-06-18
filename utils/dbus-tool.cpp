@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -61,10 +61,19 @@ int main (int argc, char* argv[])
     try {
         ubus::Connection conn;
 
-        conn.connect (opt.bus);
-        if (!conn.is_connected()) {
-            cerr << "Error: Failed to connect to " << (opt.bus==DBUS_BUS_SESSION?"session":"system") << " bus" << endl;
-            exit (1);
+        if (opt.bus_address.empty()) {
+            conn.connect (opt.bus);
+            if (!conn.is_connected()) {
+                cerr << "Error: Failed to connect to " <<
+                    (opt.bus==DBUS_BUS_SESSION?"session":"system") << " bus" << endl;
+                exit (1);
+            }
+        }else{
+            conn.connect (opt.bus_address);
+            if (!conn.is_connected()) {
+                cerr << "Error: Failed to connect to bus " << opt.bus_address << endl;
+                exit (1);
+            }
         }
 
         if (opt.cmd == "list") {
