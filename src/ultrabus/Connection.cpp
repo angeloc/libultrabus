@@ -477,8 +477,10 @@ namespace ultrabus {
         long& timer_id = entry->second;
 
         if (dbus_timeout_get_enabled(timeout)) {
-            if (timer_id >= 0)
+            if (timer_id >= 0) {
                 self->timer_set->cancel (timer_id);
+                timer_id = -1;
+            }
             auto interval = dbus_timeout_get_interval (timeout);
             if (interval > 0) {
                 DBG_LOG ("Set timer: %d", interval);
@@ -495,8 +497,10 @@ namespace ultrabus {
                 });
             }
         }else{
-            if (timer_id >= 0)
+            if (timer_id >= 0) {
                 self->timer_set->cancel (timer_id);
+                timer_id = -1;
+            }
             DBG_LOG ("Cancel timer");
         }
 
@@ -535,12 +539,16 @@ namespace ultrabus {
             return;
         long& timer_id = entry->second;
 
+        // Cancel the timer if it is active
+        if (timer_id >= 0) {
+            self->timer_set->cancel (timer_id);
+            timer_id = -1;
+        }
+
         if (dbus_timeout_get_enabled(timeout)) {
             auto interval = dbus_timeout_get_interval (timeout);
+            DBG_LOG ("Enable timer, interval: %d", (int)interval);
             if (interval > 0) {
-                DBG_LOG ("Set timer: %d", interval);
-                if (timer_id >= 0)
-                    self->timer_set->cancel (timer_id);
                 timer_id = self->timer_set->set (interval,
                                                  interval,
                                                  [self, timeout](iomultiplex::TimerSet& ts,
@@ -554,9 +562,8 @@ namespace ultrabus {
                 });
             }
         }else{
+            // Timer already cancelled above
             DBG_LOG ("Cancel timer");
-            if (timer_id >= 0)
-                self->timer_set->cancel (timer_id);
         }
     }
 
