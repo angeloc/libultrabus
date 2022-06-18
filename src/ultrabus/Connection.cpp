@@ -20,9 +20,14 @@
 #include <condition_variable>
 
 
-#if 0
+//#define TRACE_DEBUG
+
+#ifdef TRACE_DEBUG
 #  include <cstdio>
-#  define DBG_LOG(format, ...) fprintf(stderr, "%s:%s:%d: " format "\n", __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__)
+#  include <unistd.h>
+#  include <sys/types.h>
+#  define DBG_LOG(format, ...) fprintf(stderr, "[%d] %s:%s:%d: " format "\n", \
+                                       (int)gettid(), __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__)
 #else
 #  define DBG_LOG(format, ...)
 #endif
@@ -108,6 +113,8 @@ namespace ultrabus {
             return -1;
         }
 
+        DBG_LOG ("Connect to bus %s", bus_address.c_str());
+
         this->private_connection = private_connection;
 
         // Connect to the bus
@@ -121,17 +128,33 @@ namespace ultrabus {
 
         dbus_connection_set_exit_on_disconnect (conn, exit_on_disconnect);
 
+        DBG_LOG ("Start message dispatcher");
+        start_message_dispatcher ();
+
         // Register the connection with the bus
         //
-        if (!dbus_bus_register(conn, nullptr)) {
-            if (private_connection)
-                dbus_connection_close (conn);
-            dbus_connection_unref (conn);
-            conn = nullptr;
+        DBG_LOG ("Register the connection with the bus");
+        Message hello_msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
+        auto reply = send_and_wait (hello_msg);
+        if (reply.is_error()) {
+            DBG_LOG ("Error registering the connection with the bus: %s - %s",
+                     reply.error_name().c_str(), reply.error_msg().c_str());
+            disconnect ();
             return -1;
         }
 
-        start_message_dispatcher ();
+        // Set the unique bus id
+        //
+        dbus_basic id_arg ("");
+        if (reply.get_args(&id_arg, nullptr) && !id_arg.str().empty()) {
+            DBG_LOG ("Got unique bus name: %s", id_arg.str().c_str());
+            dbus_bus_set_unique_name (conn, id_arg.str().c_str());
+        }else{
+            DBG_LOG ("Error registering the connection with the bus: "
+                     "Invalid reply parameter when expecting a bus ID");
+            disconnect ();
+            return -1;
+        }
 
         return 0;
     }
@@ -429,8 +452,6 @@ namespace ultrabus {
     //-----------------------------------------------------------------------
     void Connection::dbus_toggled_watch_cb (DBusWatch* watch, void* data)
     {
-        DBG_LOG ("Toggle watch");
-
         Connection* self = static_cast<Connection*> (data);
 
         std::lock_guard<std::mutex> lock (self->wt_mutex);
@@ -440,9 +461,11 @@ namespace ultrabus {
         iomultiplex::FdConnection& fdc = entry->second;
 
         bool enabled = dbus_watch_get_enabled (watch);
+        auto flags = dbus_watch_get_flags (watch);
         if (enabled) {
-            auto flags = dbus_watch_get_flags (watch);
+            DBG_LOG ("Toggle watch - enable");
             if (flags & DBUS_WATCH_READABLE) {
+                DBG_LOG ("    Enble watch for RX");
                 fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool{
                                      if (!ior.errnum)
                                          self->dbus_watch_rx_ready_cb (ior, watch);
@@ -450,6 +473,7 @@ namespace ultrabus {
                                  });
             }
             if (flags & DBUS_WATCH_WRITABLE) {
+                DBG_LOG ("    Enble watch for TX");
                 fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool{
                                      if (!ior.errnum)
                                          self->dbus_watch_tx_ready_cb (ior, watch);
@@ -457,7 +481,15 @@ namespace ultrabus {
                                  });
             }
         }else{
-            fdc.cancel ();
+#ifdef TRACE_DEBUG
+            DBG_LOG ("Toggle watch - disable");
+            if (flags & DBUS_WATCH_READABLE)
+                DBG_LOG ("    Disable watch for RX");
+            if (flags & DBUS_WATCH_WRITABLE)
+                DBG_LOG ("    Disable watch for TX");
+#endif
+            fdc.cancel ((flags & DBUS_WATCH_READABLE),  // Cancel RX if readable
+                        (flags & DBUS_WATCH_WRITABLE)); // Cancel TX if readable
         }
     }
 
