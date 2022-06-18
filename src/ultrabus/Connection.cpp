@@ -482,7 +482,7 @@ namespace ultrabus {
                 timer_id = -1;
             }
             auto interval = dbus_timeout_get_interval (timeout);
-            if (interval > 0) {
+            if (interval >= 0) {
                 DBG_LOG ("Set timer: %d", interval);
                 timer_id = self->timer_set->set (interval,
                                                  interval,
@@ -548,7 +548,7 @@ namespace ultrabus {
         if (dbus_timeout_get_enabled(timeout)) {
             auto interval = dbus_timeout_get_interval (timeout);
             DBG_LOG ("Enable timer, interval: %d", (int)interval);
-            if (interval > 0) {
+            if (interval >= 0) {
                 timer_id = self->timer_set->set (interval,
                                                  interval,
                                                  [self, timeout](iomultiplex::TimerSet& ts,
