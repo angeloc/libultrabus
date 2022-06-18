@@ -132,6 +132,7 @@ namespace ultrabus {
         }
 
         start_message_dispatcher ();
+
         return 0;
     }
 
@@ -148,13 +149,12 @@ namespace ultrabus {
     //-----------------------------------------------------------------------
     void Connection::disconnect ()
     {
-        if (!is_connected())
+        if (!conn)
             return;
 
-        if (private_connection)
+        if (private_connection && dbus_connection_get_is_connected(conn))
             dbus_connection_close (conn);
-        else
-            dbus_connection_unref (conn);
+        dbus_connection_unref (conn);
 
         pending_mutex.lock ();
         for (auto& e : pending_messages)
