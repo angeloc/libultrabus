@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -124,7 +124,6 @@ namespace ultrabus {
         DBusConnection* conn;
         std::string conn_addr;
         bool private_connection;
-        std::thread worker_thread;
 
         std::mutex pending_mutex;
         std::map<DBusPendingCall*, std::function<void (Message&)>> pending_messages;

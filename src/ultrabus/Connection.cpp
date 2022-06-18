@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -175,7 +175,7 @@ namespace ultrabus {
         }
         if (internal_io_handler) {
             ioh->stop ();
-            worker_thread.join ();
+            ioh->join ();
         }
 
         conn = nullptr;
@@ -283,12 +283,8 @@ namespace ultrabus {
         if (!conn)
             return;
 
-        if (internal_io_handler) {
-            // Start I/O thread
-            worker_thread = std::thread ([this](){
-                                             ioh->run ();
-                                         });
-        }
+        if (internal_io_handler)
+            ioh->run (true); // Start I/O worker thread
 
         dbus_connection_set_dispatch_status_function (conn,
                                                       dbus_dispatch_status_cb,
