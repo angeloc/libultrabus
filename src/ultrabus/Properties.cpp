@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -19,6 +19,7 @@
 #include <ultrabus/Properties.hpp>
 #include <ultrabus/dbus_dict_entry.hpp>
 #include <ultrabus/dbus_variant.hpp>
+#include <stdexcept>
 #include <typeinfo>
 
 
