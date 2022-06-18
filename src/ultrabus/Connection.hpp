@@ -22,7 +22,6 @@
 #include <ultrabus/Message.hpp>
 #include <functional>
 #include <string>
-#include <thread>
 #include <mutex>
 #include <map>
 #include <dbus/dbus.h>
