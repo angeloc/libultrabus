@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -27,7 +27,7 @@ namespace ultrabus {
 
 
     /**
-     * Base class for DBus object handlers.
+     * An object handler that handles DBus method calls in a callback.
      */
     class CallbackObjectHandler : public ObjectHandler {
     public:
@@ -53,6 +53,7 @@ namespace ultrabus {
 
         /**
          * Set a callback to be called for incomming method calls.
+         * This will replace any existing callback.
          * @param callback The callback to be called for incomming
          *                 messages, or <code>nullptr</code> to
          *                 remove the callback.
