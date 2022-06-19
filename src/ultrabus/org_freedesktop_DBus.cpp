@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -111,17 +111,19 @@ namespace ultrabus {
                                                   Message& msg,
                                                   std::function<void (retvalue<int>& retval)>& cb)
     {
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<int> retval (0);
-                                       if (reply.is_error()) {
-                                           retval = -1;
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       }
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<int> retval (0);
+                    if (reply.is_error()) {
+                        retval = -1;
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    }
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -143,14 +145,16 @@ namespace ultrabus {
                                                  Message& msg,
                                                  std::function<void (retvalue<uint32_t>& retval)>& cb)
     {
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<uint32_t> retval;
-                                       handle_u32_reply (reply, retval);
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<uint32_t> retval;
+                    handle_u32_reply (reply, retval);
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -172,14 +176,16 @@ namespace ultrabus {
                                                  Message& msg,
                                                  std::function<void (retvalue<std::string>& retval)>& cb)
     {
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<std::string> retval;
-                                       handle_str_reply (reply, retval);
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<std::string> retval;
+                    handle_str_reply (reply, retval);
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -187,7 +193,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<std::string> org_freedesktop_DBus::hello ()
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "Hello");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
         return sync_call_method_reply_with_str (conn, msg);
     }
 
@@ -196,7 +202,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     int org_freedesktop_DBus::hello (std::function<void (retvalue<std::string>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "Hello");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
         return async_call_method_reply_with_str (conn, msg, cb);
     }
 
@@ -206,7 +212,7 @@ namespace ultrabus {
     retvalue<uint32_t> org_freedesktop_DBus::request_name (const std::string bus_name,
                                                            uint32_t flags)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RequestName");
         msg.append_arg (bus_name, flags);
         return sync_call_method_reply_with_u32 (conn, msg);
     }
@@ -218,7 +224,7 @@ namespace ultrabus {
                                             uint32_t flags,
                                             std::function<void (retvalue<uint32_t>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RequestName");
         msg.append_arg (bus_name, flags);
         return async_call_method_reply_with_u32 (conn, msg, cb);
     }
@@ -228,7 +234,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<uint32_t> org_freedesktop_DBus::release_name (const std::string bus_name)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ReleaseName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ReleaseName");
         msg << bus_name;
         return sync_call_method_reply_with_u32 (conn, msg);
     }
@@ -239,7 +245,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::release_name (const std::string bus_name,
                                             std::function<void (retvalue<uint32_t>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ReleaseName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ReleaseName");
         msg << bus_name;
         return async_call_method_reply_with_u32 (conn, msg, cb);
     }
@@ -250,7 +256,7 @@ namespace ultrabus {
     retvalue<std::vector<std::string>> org_freedesktop_DBus::list_queued_owners (const std::string& bus_name)
     {
         retvalue<std::vector<std::string>> retval;
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListQueuedOwners");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListQueuedOwners");
         msg << bus_name;
 
         auto reply = conn.send_and_wait (msg);
@@ -275,23 +281,25 @@ namespace ultrabus {
     int org_freedesktop_DBus::list_queued_owners (const std::string& bus_name,
                                                   std::function<void (retvalue<std::vector<std::string>>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListQueuedOwners");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListQueuedOwners");
         msg << bus_name;
 
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       dbus_array names;
-                                       retvalue<std::vector<std::string>> retval;
-                                       if (reply.is_error())
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       else if (!reply.get_args(&names, nullptr))
-                                           retval.err (-1, "Invalid message reply argument");
-                                       else for (auto& name : names)
-                                                retval.get().emplace_back (name.str());
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    dbus_array names;
+                    retvalue<std::vector<std::string>> retval;
+                    if (reply.is_error())
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    else if (!reply.get_args(&names, nullptr))
+                        retval.err (-1, "Invalid message reply argument");
+                    else for (auto& name : names)
+                             retval.get().emplace_back (name.str());
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -300,7 +308,7 @@ namespace ultrabus {
     retvalue<std::set<std::string>> org_freedesktop_DBus::list_names ()
     {
         retvalue<std::set<std::string>> retval;
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListNames");
 
         auto reply = conn.send_and_wait (msg);
         if (reply.is_error()) {
@@ -323,22 +331,24 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     int org_freedesktop_DBus::list_names (std::function<void (retvalue<std::set<std::string>>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListNames");
 
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       dbus_array names;
-                                       retvalue<std::set<std::string>> retval;
-                                       if (reply.is_error())
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       else if (!reply.get_args(&names, nullptr))
-                                           retval.err (-1, "Invalid message reply argument");
-                                       else for (auto& name : names)
-                                                retval.get().emplace (name.str());
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    dbus_array names;
+                    retvalue<std::set<std::string>> retval;
+                    if (reply.is_error())
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    else if (!reply.get_args(&names, nullptr))
+                        retval.err (-1, "Invalid message reply argument");
+                    else for (auto& name : names)
+                             retval.get().emplace (name.str());
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -347,7 +357,7 @@ namespace ultrabus {
     retvalue<std::set<std::string>> org_freedesktop_DBus::list_activatable_names ()
     {
         retvalue<std::set<std::string>> retval;
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListActivatableNames");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListActivatableNames");
 
         auto reply = conn.send_and_wait (msg);
         if (reply.is_error()) {
@@ -371,22 +381,24 @@ namespace ultrabus {
     int org_freedesktop_DBus::list_activatable_names (std::function<void (retvalue<std::set<std::string>>& retval)> cb)
     {
         retvalue<std::set<std::string>> retval;
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListActivatableNames");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListActivatableNames");
 
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       dbus_array names;
-                                       retvalue<std::set<std::string>> retval;
-                                       if (reply.is_error())
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       else if (!reply.get_args(&names, nullptr))
-                                           retval.err (-1, "Invalid message reply argument");
-                                       else for (auto& name : names)
-                                                retval.get().emplace (name.str());
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    dbus_array names;
+                    retvalue<std::set<std::string>> retval;
+                    if (reply.is_error())
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    else if (!reply.get_args(&names, nullptr))
+                        retval.err (-1, "Invalid message reply argument");
+                    else for (auto& name : names)
+                             retval.get().emplace (name.str());
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -395,7 +407,7 @@ namespace ultrabus {
     retvalue<bool> org_freedesktop_DBus::name_has_owner (const std::string bus_name)
     {
         retvalue<bool> retval;
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "NameHasOwner");
         msg << bus_name;
 
         auto reply = conn.send_and_wait (msg);
@@ -409,17 +421,19 @@ namespace ultrabus {
     int org_freedesktop_DBus::name_has_owner (const std::string bus_name,
                                               std::function<void (retvalue<bool>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "NameHasOwner");
         msg << bus_name;
 
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<bool> retval;
-                                       handle_boolean_reply (reply, retval);
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<bool> retval;
+                    handle_boolean_reply (reply, retval);
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -428,7 +442,7 @@ namespace ultrabus {
     retvalue<uint32_t> org_freedesktop_DBus::start_service_by_name (const std::string service,
                                                                     uint32_t flags)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "StartServiceByName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "StartServiceByName");
         msg.append_arg (service, flags);
         return sync_call_method_reply_with_u32 (conn, msg);
     }
@@ -440,7 +454,7 @@ namespace ultrabus {
                                                      uint32_t flags,
                                                      std::function<void (retvalue<uint32_t>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "StartServiceByName");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "StartServiceByName");
         msg.append_arg (service, flags);
         return async_call_method_reply_with_u32 (conn, msg, cb);
     }
@@ -450,7 +464,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<int> org_freedesktop_DBus::update_activation_environment (const std::map<std::string, std::string>& env)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "UpdateActivationEnvironment");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "UpdateActivationEnvironment");
 
         dbus_array dict ("{ss}");
         for (auto& e : env)
@@ -466,7 +480,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::update_activation_environment (const std::map<std::string, std::string>& env,
                                                              std::function<void (retvalue<int>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "UpdateActivationEnvironment");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "UpdateActivationEnvironment");
 
         dbus_array dict ("{ss}");
         for (auto& e : env)
@@ -481,7 +495,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<std::string> org_freedesktop_DBus::get_name_owner (const std::string bus_name)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
         msg << bus_name;
         return sync_call_method_reply_with_str (conn, msg);
     }
@@ -492,7 +506,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::get_name_owner (const std::string bus_name,
                                               std::function<void (retvalue<std::string>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
         msg << bus_name;
         return async_call_method_reply_with_str (conn, msg, cb);
     }
@@ -502,7 +516,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<uint32_t> org_freedesktop_DBus::get_connection_unix_user (const std::string service)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixUser");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixUser");
         msg << service;
         return sync_call_method_reply_with_u32 (conn, msg);
     }
@@ -513,7 +527,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::get_connection_unix_user (const std::string service,
                                                         std::function<void (retvalue<uint32_t>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixUser");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixUser");
         msg << service;
         return async_call_method_reply_with_u32 (conn, msg, cb);
     }
@@ -523,7 +537,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<uint32_t> org_freedesktop_DBus::get_connection_unix_process_id (const std::string service)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixProcessID");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
         msg << service;
         return sync_call_method_reply_with_u32 (conn, msg);
     }
@@ -534,7 +548,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::get_connection_unix_process_id (const std::string service,
                                                               std::function<void (retvalue<uint32_t>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixProcessID");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
         msg << service;
         return async_call_method_reply_with_u32 (conn, msg, cb);
     }
@@ -547,7 +561,7 @@ namespace ultrabus {
     {
         retvalue<std::map<std::string, dbus_variant>> retval;
 
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionCredentials");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionCredentials");
         msg << service;
 
         auto reply = conn.send_and_wait (msg);
@@ -582,34 +596,37 @@ namespace ultrabus {
             const std::string service,
             std::function<void (retvalue<std::map<std::string, dbus_variant>>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionCredentials");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionCredentials");
         msg << service;
-        if (cb == nullptr)
+        if (cb == nullptr) {
             return conn.send (msg);
-        return conn.send (msg, [cb](Message& reply){
-                                   retvalue<std::map<std::string, dbus_variant>> retval;
-                                   dbus_array reply_arg;
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<std::map<std::string, dbus_variant>> retval;
+                    dbus_array reply_arg;
 
-                                   if (reply.is_error()) {
-                                       retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                   }
-                                   else if (!reply.get_args(&reply_arg, nullptr)) {
-                                       retval.err (-1, "Invalid message reply argument");
-                                   }
-                                   else {
-                                       try {
-                                           for (auto& entry : reply_arg) {
-                                               auto& de = dynamic_cast<dbus_dict_entry&> (entry);
-                                               retval.get().emplace (de.key().str(), de.value());
-                                           }
-                                       }
-                                       catch (std::bad_cast& bc) {
-                                           retval.get().clear ();
-                                           retval.err (-1, "Invalid message reply argument");
-                                       }
-                                   }
-                                   cb (retval);
-                               });
+                    if (reply.is_error()) {
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    }
+                    else if (!reply.get_args(&reply_arg, nullptr)) {
+                        retval.err (-1, "Invalid message reply argument");
+                    }
+                    else {
+                        try {
+                            for (auto& entry : reply_arg) {
+                                auto& de = dynamic_cast<dbus_dict_entry&> (entry);
+                                retval.get().emplace (de.key().str(), de.value());
+                            }
+                        }
+                        catch (std::bad_cast& bc) {
+                            retval.get().clear ();
+                            retval.err (-1, "Invalid message reply argument");
+                        }
+                    }
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -617,7 +634,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<int> org_freedesktop_DBus::add_match (const std::string rule)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "AddMatch");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "AddMatch");
         msg << rule;
         return sync_call_method_reply_with_void (conn, msg);
     }
@@ -628,7 +645,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::add_match (const std::string rule,
                                          std::function<void (retvalue<int>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "AddMatch");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "AddMatch");
         msg << rule;
         return async_call_method_reply_with_void (conn, msg, cb);
     }
@@ -638,7 +655,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<int> org_freedesktop_DBus::remove_match (const std::string rule)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RemoveMatch");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RemoveMatch");
         msg << rule;
         return sync_call_method_reply_with_void (conn, msg);
     }
@@ -649,7 +666,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::remove_match (const std::string rule,
                                             std::function<void (retvalue<int>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RemoveMatch");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RemoveMatch");
         msg << rule;
         return async_call_method_reply_with_void (conn, msg, cb);
     }
@@ -659,7 +676,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<std::string> org_freedesktop_DBus::get_id (void)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetId");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetId");
         return sync_call_method_reply_with_str (conn, msg);
     }
 
@@ -668,7 +685,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     int org_freedesktop_DBus::get_id (std::function<void (retvalue<std::string>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetId");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetId");
         return async_call_method_reply_with_str (conn, msg, cb);
     }
 
@@ -677,7 +694,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     retvalue<int> org_freedesktop_DBus::become_monitor (std::list<std::string> rules)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "BecomeMonitor");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "BecomeMonitor");
         dbus_array rules_arg ("s");
 
         for (auto& r : rules)
@@ -694,7 +711,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::become_monitor (std::list<std::string> rules,
                                               std::function<void (retvalue<int>& retval)> cb)
     {
-        Message msg ("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "BecomeMonitor");
+        Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "BecomeMonitor");
         dbus_array rules_arg ("s");
 
         for (auto& r : rules)
@@ -712,9 +729,9 @@ namespace ultrabus {
     {
         static const std::string rule =
             "type='signal'"
-            ",sender='org.freedesktop.DBus'"
-            ",path='/org/freedesktop/DBus'"
-            ",interface='org.freedesktop.DBus'"
+            ",sender='" DBUS_SERVICE_DBUS "'"
+            ",path='" DBUS_PATH_DBUS "'"
+            ",interface='" DBUS_INTERFACE_DBUS "'"
             ",member='NameOwnerChanged'";
 
         std::lock_guard<std::mutex> lock (cb_mutex);
@@ -738,9 +755,9 @@ namespace ultrabus {
     {
         static const std::string rule =
             "type='signal'"
-            ",sender='org.freedesktop.DBus'"
-            ",path='/org/freedesktop/DBus'"
-            ",interface='org.freedesktop.DBus'"
+            ",sender='" DBUS_SERVICE_DBUS "'"
+            ",path='" DBUS_PATH_DBUS "'"
+            ",interface='" DBUS_INTERFACE_DBUS "'"
             ",member='NameLost'";
 
         std::lock_guard<std::mutex> lock (cb_mutex);
@@ -764,9 +781,9 @@ namespace ultrabus {
     {
         static const std::string rule =
             "type='signal'"
-            ",sender='org.freedesktop.DBus'"
-            ",path='/org/freedesktop/DBus'"
-            ",interface='org.freedesktop.DBus'"
+            ",sender='" DBUS_SERVICE_DBUS "'"
+            ",path='" DBUS_PATH_DBUS "'"
+            ",interface='" DBUS_INTERFACE_DBUS "'"
             ",member='NameAcquired'";
 
         std::lock_guard<std::mutex> lock (cb_mutex);
@@ -788,8 +805,8 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     bool org_freedesktop_DBus::on_signal (Message& msg)
     {
-        if (msg.interface() != "org.freedesktop.DBus" ||
-            msg.path() != "/org/freedesktop/DBus")
+        if (msg.interface() != DBUS_INTERFACE_DBUS ||
+            msg.path() != DBUS_PATH_DBUS)
         {
             return false;
         }
@@ -801,11 +818,12 @@ namespace ultrabus {
 
         if (unique_bus_name.empty()) {
             // Fetch the unique bus name of 'org.freedesktop.DBus' before calling on_signal_impl
-            get_name_owner ("org.freedesktop.DBus", [this, msg](retvalue<std::string>& retval){
-                                                        std::lock_guard<std::mutex> lock (cb_mutex);
-                                                        unique_bus_name = retval.get ();
-                                                        on_signal_impl (const_cast<Message&>(msg));
-                                                    });
+            get_name_owner (DBUS_SERVICE_DBUS, [this, msg](retvalue<std::string>& retval)
+                {
+                    std::lock_guard<std::mutex> lock (cb_mutex);
+                    unique_bus_name = retval.get ();
+                    on_signal_impl (const_cast<Message&>(msg));
+                });
         }else{
             on_signal_impl (msg);
         }

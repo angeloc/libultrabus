@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -36,7 +36,7 @@ namespace ultrabus {
     retvalue<unsigned> org_freedesktop_DBus_Peer::ping (const std::string& service)
     {
         retvalue<unsigned> retval (0);
-        Message msg (service, "/", "org.freedesktop.DBus.Peer", "Ping");
+        Message msg (service, "/", DBUS_INTERFACE_PEER, "Ping");
 
         auto start = std::chrono::high_resolution_clock::now ();
         auto reply = conn.send_and_wait (msg);
@@ -57,20 +57,21 @@ namespace ultrabus {
     retvalue<unsigned> org_freedesktop_DBus_Peer::ping (const std::string& service,
                                                         std::function<void (retvalue<unsigned>& result)> callback)
     {
-        Message msg (service, "/", "org.freedesktop.DBus.Peer", "Ping");
+        Message msg (service, "/", DBUS_INTERFACE_PEER, "Ping");
         if (!callback) {
             return conn.send (msg);
         }else{
             auto start = std::chrono::high_resolution_clock::now ();
-            return conn.send (msg, [callback, &start](Message& reply){
-                                       auto stop = std::chrono::high_resolution_clock::now ();
-                                       retvalue<unsigned> retval (0);
-                                       if (reply.is_error())
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       else
-                                           retval = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
-                                       callback (retval);
-                                   });
+            return conn.send (msg, [callback, &start](Message& reply)
+                {
+                    auto stop = std::chrono::high_resolution_clock::now ();
+                    retvalue<unsigned> retval (0);
+                    if (reply.is_error())
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    else
+                        retval = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+                    callback (retval);
+                });
         }
     }
 
@@ -80,7 +81,7 @@ namespace ultrabus {
     retvalue<std::string> org_freedesktop_DBus_Peer::get_machine_id (const std::string& service)
     {
         retvalue<std::string> retval;
-        Message msg (service, "/", "org.freedesktop.DBus.Peer", "GetMachineId");
+        Message msg (service, "/", DBUS_INTERFACE_PEER, "GetMachineId");
 
         auto reply = conn.send_and_wait (msg);
         if (reply.is_error()) {
@@ -102,24 +103,25 @@ namespace ultrabus {
     int org_freedesktop_DBus_Peer::get_machine_id (const std::string& service,
                                                    std::function<void (retvalue<std::string>& result)> callback)
     {
-        Message msg (service, "/", "org.freedesktop.DBus.Peer", "GetMachineId");
+        Message msg (service, "/", DBUS_INTERFACE_PEER, "GetMachineId");
         if (!callback) {
             return conn.send (msg);
         }else{
-            return conn.send (msg, [callback](Message& reply){
-                                       retvalue<std::string> retval;
-                                       dbus_basic id;
-                                       if (reply.is_error() || !reply.get_args(&id, nullptr)) {
-                                           if (reply.is_error())
-                                               retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                           else
-                                               retval.err (-1, "Invalid message reply argument");
-                                       }else{
-                                           // We have a result
-                                           retval = id.str ();
-                                       }
-                                       callback (retval);
-                                   });
+            return conn.send (msg, [callback](Message& reply)
+                {
+                    retvalue<std::string> retval;
+                    dbus_basic id;
+                    if (reply.is_error() || !reply.get_args(&id, nullptr)) {
+                        if (reply.is_error())
+                            retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                        else
+                            retval.err (-1, "Invalid message reply argument");
+                    }else{
+                        // We have a result
+                        retval = id.str ();
+                    }
+                    callback (retval);
+                });
         }
     }
 

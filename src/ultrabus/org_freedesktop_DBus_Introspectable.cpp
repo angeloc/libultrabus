@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -36,7 +36,7 @@ namespace ultrabus {
     {
         retvalue<std::string> retval;
 
-        Message msg (service, object_path, "org.freedesktop.DBus.Introspectable", "Introspect");
+        Message msg (service, object_path, DBUS_INTERFACE_INTROSPECTABLE, "Introspect");
 
         auto reply = conn.send_and_wait (msg);
         if (reply.is_error()) {
@@ -59,24 +59,25 @@ namespace ultrabus {
                                                          const std::string& object_path,
                                                          std::function<void (retvalue<std::string>& result)> callback)
     {
-        Message msg (service, object_path, "org.freedesktop.DBus.Introspectable", "Introspect");
+        Message msg (service, object_path, DBUS_INTERFACE_INTROSPECTABLE, "Introspect");
         if (!callback) {
             return conn.send (msg);
         }else{
-            return conn.send (msg, [callback](Message& reply){
-                                       retvalue<std::string> retval;
-                                       dbus_basic data;
-                                       if (reply.is_error() || !reply.get_args(&data, nullptr)) {
-                                           if (reply.is_error())
-                                               retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                           else
-                                               retval.err (-1, "Invalid message reply argument");
-                                       }else{
-                                           // We have a result
-                                           retval = data.str ();
-                                       }
-                                       callback (retval);
-                                   });
+            return conn.send (msg, [callback](Message& reply)
+                {
+                    retvalue<std::string> retval;
+                    dbus_basic data;
+                    if (reply.is_error() || !reply.get_args(&data, nullptr)) {
+                        if (reply.is_error())
+                            retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                        else
+                            retval.err (-1, "Invalid message reply argument");
+                    }else{
+                        // We have a result
+                        retval = data.str ();
+                    }
+                    callback (retval);
+                });
         }
     }
 

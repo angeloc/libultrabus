@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -117,13 +117,15 @@ namespace ultrabus {
             std::function<void (retvalue<managed_objects_t>& result)> callback)
     {
         Message msg (service, object_path, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-        if (!callback)
+        if (!callback) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [callback](Message& reply){
-                                       auto retval = handle_get_managed_objects_result (reply);
-                                       callback (retval);
-                                   });
+        }else{
+            return conn.send (msg, [callback](Message& reply)
+                {
+                    auto retval = handle_get_managed_objects_result (reply);
+                    callback (retval);
+                });
+        }
     }
 
 
@@ -146,23 +148,23 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, opath, cb](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
+        return dbus.get_name_owner (service, [this, opath, cb](retvalue<std::string>& bus_name)
+            {
+                // Called from worker thread
+                if (bus_name.err())
+                    return;
 
-                                        std::lock_guard<std::mutex> lock (iface_mutex);
-                                        auto key = std::make_pair (bus_name.get(), opath);
-                                        auto entry = iface_added_callbacks.find (key);
-                                        if (entry != iface_added_callbacks.end()) {
-                                            entry->second = cb;
-                                        }else{
-                                            iface_added_callbacks.emplace (key, cb);
-                                            // Add rule
-                                            add_match_rule (make_iface_added_rule(bus_name.get(), opath));
-                                        }
-                                    });
+                std::lock_guard<std::mutex> lock (iface_mutex);
+                auto key = std::make_pair (bus_name.get(), opath);
+                auto entry = iface_added_callbacks.find (key);
+                if (entry != iface_added_callbacks.end()) {
+                    entry->second = cb;
+                }else{
+                    iface_added_callbacks.emplace (key, cb);
+                    // Add rule
+                    add_match_rule (make_iface_added_rule(bus_name.get(), opath));
+                }
+            });
     }
 
 
@@ -185,23 +187,23 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, opath, cb](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
+        return dbus.get_name_owner (service, [this, opath, cb](retvalue<std::string>& bus_name)
+            {
+                // Called from worker thread
+                if (bus_name.err())
+                    return;
 
-                                        std::lock_guard<std::mutex> lock (iface_mutex);
-                                        auto key = std::make_pair (bus_name.get(), opath);
-                                        auto entry = iface_removed_callbacks.find (key);
-                                        if (entry != iface_removed_callbacks.end()) {
-                                            entry->second = cb;
-                                        }else{
-                                            iface_removed_callbacks.emplace (key, cb);
-                                            // Add rule
-                                            add_match_rule (make_iface_removed_rule(bus_name.get(), opath));
-                                        }
-                                    });
+                std::lock_guard<std::mutex> lock (iface_mutex);
+                auto key = std::make_pair (bus_name.get(), opath);
+                auto entry = iface_removed_callbacks.find (key);
+                if (entry != iface_removed_callbacks.end()) {
+                    entry->second = cb;
+                }else{
+                    iface_removed_callbacks.emplace (key, cb);
+                    // Add rule
+                    add_match_rule (make_iface_removed_rule(bus_name.get(), opath));
+                }
+            });
     }
 
 
@@ -220,22 +222,22 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, opath](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
+        return dbus.get_name_owner (service, [this, opath](retvalue<std::string>& bus_name)
+            {
+                // Called from worker thread
+                if (bus_name.err())
+                    return;
 
-                                        std::lock_guard<std::mutex> lock (iface_mutex);
-                                        auto key = std::make_pair (bus_name.get(), opath);
-                                        auto entry = iface_added_callbacks.find (key);
-                                        if (entry != iface_added_callbacks.end()) {
-                                            iface_added_callbacks.erase (entry);
-                                            // Remove rule
-                                            remove_match_rule (make_iface_added_rule(bus_name.get(),
-                                                                                     opath));
-                                        }
-                                    });
+                std::lock_guard<std::mutex> lock (iface_mutex);
+                auto key = std::make_pair (bus_name.get(), opath);
+                auto entry = iface_added_callbacks.find (key);
+                if (entry != iface_added_callbacks.end()) {
+                    iface_added_callbacks.erase (entry);
+                    // Remove rule
+                    remove_match_rule (make_iface_added_rule(bus_name.get(),
+                                                             opath));
+                }
+            });
     }
 
 
@@ -254,22 +256,22 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, opath](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
+        return dbus.get_name_owner (service, [this, opath](retvalue<std::string>& bus_name)
+            {
+                // Called from worker thread
+                if (bus_name.err())
+                    return;
 
-                                        std::lock_guard<std::mutex> lock (iface_mutex);
-                                        auto key = std::make_pair (bus_name.get(), opath);
-                                        auto entry = iface_removed_callbacks.find (key);
-                                        if (entry != iface_removed_callbacks.end()) {
-                                            iface_removed_callbacks.erase (entry);
-                                            // Remove rule
-                                            remove_match_rule (make_iface_removed_rule(bus_name.get(),
-                                                                                       opath));
-                                        }
-                                    });
+                std::lock_guard<std::mutex> lock (iface_mutex);
+                auto key = std::make_pair (bus_name.get(), opath);
+                auto entry = iface_removed_callbacks.find (key);
+                if (entry != iface_removed_callbacks.end()) {
+                    iface_removed_callbacks.erase (entry);
+                    // Remove rule
+                    remove_match_rule (make_iface_removed_rule(bus_name.get(),
+                                                               opath));
+                }
+            });
     }
 
 

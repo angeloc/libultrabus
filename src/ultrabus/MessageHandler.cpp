@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -36,6 +36,23 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
+    static void do_remove_match_rule (Connection& conn, const std::string& rule)
+    {
+        if (conn.io_handler().same_context() == false) {
+            dbus_bus_remove_match (conn.handle(), rule.c_str(), nullptr);
+        }else{
+            Message msg (DBUS_SERVICE_DBUS,
+                         DBUS_PATH_DBUS,
+                         DBUS_INTERFACE_DBUS,
+                         "RemoveMatch");
+            msg << rule;
+            conn.send (msg);
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
     MessageHandler::MessageHandler (Connection& connection)
         : conn (connection)
     {
@@ -59,7 +76,7 @@ namespace ultrabus {
 
         std::lock_guard<std::mutex> lock (match_rule_mutex);
         for (auto& rule : match_rules)
-            dbus_bus_remove_match (conn.handle(), rule.c_str(), nullptr);
+            do_remove_match_rule (conn, rule);
     }
 
 
@@ -69,21 +86,20 @@ namespace ultrabus {
     {
         std::lock_guard<std::mutex> lock (match_rule_mutex);
 
-        if (match_rules.find(rule) != match_rules.end())
-            return;
-
-        TRACE ("Add match rule: %s", rule.c_str());
-        if (conn.io_handler().same_context() == false) {
-            dbus_bus_add_match (conn.handle(), rule.c_str(), nullptr);
-        }else{
-            Message msg ("org.freedesktop.DBus",
-                         "/org/freedesktop/DBus",
-                         "org.freedesktop.DBus",
-                         "AddMatch");
-            msg << rule;
-            conn.send (msg);
+        if (match_rules.find(rule) == match_rules.end()) {
+            TRACE ("Add match rule: %s", rule.c_str());
+            if (conn.io_handler().same_context() == false) {
+                dbus_bus_add_match (conn.handle(), rule.c_str(), nullptr);
+            }else{
+                Message msg (DBUS_SERVICE_DBUS,
+                             DBUS_PATH_DBUS,
+                             DBUS_INTERFACE_DBUS,
+                             "AddMatch");
+                msg << rule;
+                conn.send (msg);
+            }
+            match_rules.emplace (rule);
         }
-        match_rules.emplace (rule);
     }
 
 
@@ -94,21 +110,11 @@ namespace ultrabus {
         std::lock_guard<std::mutex> lock (match_rule_mutex);
 
         auto i = match_rules.find (rule);
-        if (i == match_rules.end())
-            return;
-
-        TRACE ("Remove match rule: %s", rule.c_str());
-        if (conn.io_handler().same_context() == false) {
-            dbus_bus_remove_match (conn.handle(), rule.c_str(), nullptr);
-        }else{
-            Message msg ("org.freedesktop.DBus",
-                         "/org/freedesktop/DBus",
-                         "org.freedesktop.DBus",
-                         "RemoveMatch");
-            msg << rule;
-            conn.send (msg);
+        if (i != match_rules.end()) {
+            TRACE ("Remove match rule: %s", rule.c_str());
+            do_remove_match_rule (conn, rule);
+            match_rules.erase (i);
         }
-        match_rules.erase (i);
     }
 
 

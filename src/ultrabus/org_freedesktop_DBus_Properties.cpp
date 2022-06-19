@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -71,7 +71,7 @@ namespace ultrabus {
             const std::string& object_path,
             const std::string& interface)
     {
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "GetAll");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "GetAll");
         msg.append_arg (interface);
 
         auto reply = conn.send_and_wait (msg);
@@ -86,16 +86,18 @@ namespace ultrabus {
                                                   const std::string& interface,
                                                   std::function<void (retvalue<Properties>& retval)> cb)
     {
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "GetAll");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "GetAll");
         msg.append_arg (interface);
 
-        if (!cb)
+        if (!cb) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       auto retval = handle_get_all_result (reply);
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    auto retval = handle_get_all_result (reply);
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -107,7 +109,7 @@ namespace ultrabus {
                                                                  const std::string& property_name)
     {
         retvalue<dbus_variant> retval;
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "Get");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "Get");
         msg.append_arg (interface, property_name);
 
         auto reply = conn.send_and_wait (msg);
@@ -131,22 +133,24 @@ namespace ultrabus {
                                               const std::string& property_name,
                                               std::function<void (retvalue<dbus_variant>& retval)> cb)
     {
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "Get");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "Get");
         msg.append_arg (interface, property_name);
 
-        if (!cb)
+        if (!cb) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<dbus_variant> retval;
-                                       if (reply.is_error()) {
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       }
-                                       else if (!reply.get_args(&retval.get(), nullptr)) {
-                                           retval.err (-1, "Invalid message reply argument");
-                                       }
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<dbus_variant> retval;
+                    if (reply.is_error()) {
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    }
+                    else if (!reply.get_args(&retval.get(), nullptr)) {
+                        retval.err (-1, "Invalid message reply argument");
+                    }
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -159,7 +163,7 @@ namespace ultrabus {
                                                              const dbus_variant& value)
     {
         retvalue<int> retval (0);
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "Set");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "Set");
         msg.append_arg (interface, property_name, value);
 
         TRACE ("%s,%s,%s,%s (%s): %s",
@@ -189,20 +193,22 @@ namespace ultrabus {
                                                          const dbus_variant& value,
                                                          std::function<void (retvalue<int>& result)> cb)
     {
-        Message msg (service, object_path, "org.freedesktop.DBus.Properties", "Set");
+        Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "Set");
         msg.append_arg (interface, property_name, value);
 
-        if (!cb)
+        if (!cb) {
             return conn.send (msg);
-        else
-            return conn.send (msg, [cb](Message& reply){
-                                       retvalue<int> retval (0);
-                                       if (reply.is_error()) {
-                                           retval = -1;
-                                           retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
-                                       }
-                                       cb (retval);
-                                   });
+        }else{
+            return conn.send (msg, [cb](Message& reply)
+                {
+                    retvalue<int> retval (0);
+                    if (reply.is_error()) {
+                        retval = -1;
+                        retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
+                    }
+                    cb (retval);
+                });
+        }
     }
 
 
@@ -215,7 +221,7 @@ namespace ultrabus {
         rule << "type='signal'"
              << ",sender='" << bus_name << "'"
              << ",path='" << object_path << "'"
-             << ",interface='org.freedesktop.DBus.Properties'"
+             << ",interface='" DBUS_INTERFACE_PROPERTIES "'"
              << ",member='PropertiesChanged'";
         return rule.str ();
     }
@@ -236,35 +242,37 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, object_path, callback](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
+        return dbus.get_name_owner (
+                service,
+                [this, object_path, callback](retvalue<std::string>& bus_name)
+                    {
+                        // Called from worker thread
+                        if (bus_name.err())
+                            return;
 
-                                        std::lock_guard<std::mutex> lock (props_changed_mutex);
+                        std::lock_guard<std::mutex> lock (props_changed_mutex);
 
-                                        auto key = std::make_pair (bus_name.get(), object_path);
-                                        auto entry = props_changed_callbacks.find (key);
+                        auto key = std::make_pair (bus_name.get(), object_path);
+                        auto entry = props_changed_callbacks.find (key);
 
-                                        if (callback) {
-                                            // Add/set callback
-                                            if (entry == props_changed_callbacks.end()) {
-                                                props_changed_callbacks.emplace (key, callback);
-                                                add_match_rule (make_props_changed_rule(bus_name.get(),
-                                                                                        object_path));
-                                            }else{
-                                                entry->second = callback;
-                                            }
-                                        }else{
-                                            // callback is nullptr, Remove callback
-                                            if (entry != props_changed_callbacks.end()) {
-                                                props_changed_callbacks.erase (entry);
-                                                remove_match_rule (make_props_changed_rule(bus_name.get(),
-                                                                                           object_path));
-                                            }
-                                        }
-                                    });
+                        if (callback) {
+                            // Add/set callback
+                            if (entry == props_changed_callbacks.end()) {
+                                props_changed_callbacks.emplace (key, callback);
+                                add_match_rule (make_props_changed_rule(bus_name.get(),
+                                                                        object_path));
+                            }else{
+                                entry->second = callback;
+                            }
+                        }else{
+                            // callback is nullptr, Remove callback
+                            if (entry != props_changed_callbacks.end()) {
+                                props_changed_callbacks.erase (entry);
+                                remove_match_rule (make_props_changed_rule(bus_name.get(),
+                                                                           object_path));
+                            }
+                        }
+                    });
     }
 
 
@@ -282,21 +290,23 @@ namespace ultrabus {
 
         // Get the unique bus name for the service
         org_freedesktop_DBus dbus (conn);
-        return dbus.get_name_owner (service,
-                                    [this, object_path](retvalue<std::string>& bus_name){
-                                        // Called from worker thread
-                                        if (bus_name.err())
-                                            return;
-                                        std::lock_guard<std::mutex> lock (props_changed_mutex);
+        return dbus.get_name_owner (
+                service,
+                [this, object_path](retvalue<std::string>& bus_name)
+                    {
+                        // Called from worker thread
+                        if (bus_name.err())
+                            return;
+                        std::lock_guard<std::mutex> lock (props_changed_mutex);
 
-                                        auto key = std::make_pair (bus_name.get(), object_path);
-                                        auto entry = props_changed_callbacks.find (key);
-                                        if (entry != props_changed_callbacks.end()) {
-                                            props_changed_callbacks.erase (entry);
-                                            remove_match_rule (make_props_changed_rule(bus_name.get(),
-                                                                                       object_path));
-                                        }
-                                    });
+                        auto key = std::make_pair (bus_name.get(), object_path);
+                        auto entry = props_changed_callbacks.find (key);
+                        if (entry != props_changed_callbacks.end()) {
+                            props_changed_callbacks.erase (entry);
+                            remove_match_rule (make_props_changed_rule(bus_name.get(),
+                                                                       object_path));
+                        }
+                    });
     }
 
 
@@ -304,7 +314,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     bool org_freedesktop_DBus_Properties::on_signal (Message& msg)
     {
-        if (msg.interface() != "org.freedesktop.DBus.Properties" ||
+        if (msg.interface() != DBUS_INTERFACE_PROPERTIES ||
             msg.name() != "PropertiesChanged")
         {
             return false;

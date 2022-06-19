@@ -165,7 +165,7 @@ static void call_method (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void introspect (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::ObjectProxy op (conn, opt.service, opt.opath, "org.freedesktop.DBus.Introspectable");
+    ubus::ObjectProxy op (conn, opt.service, opt.opath, DBUS_INTERFACE_INTROSPECTABLE);
     auto reply = op.call ("Introspect");
     if (reply.is_error()) {
         cerr << "Error: " << reply.error_name() << " - " << reply.error_msg() << endl;
@@ -312,18 +312,18 @@ static void listen_for_signals (ubus::Connection& conn, const appargs_t& opt)
     sigaction (SIGINT, &sa, nullptr);
 
     op.add_signal_callback (opt.iface, opt.name, [](ubus::Message &sig)
-    {
-        // Called from the connection worker thread
-        cout << "Got signal: " << sig.name() << endl;
-        auto args = sig.arguments ();
-        if (!args.empty()) {
-            cout << "Arguments: " << endl;
-            for (auto& arg : args) {
-                cout << "    " << arg->str() << endl;
+        {
+            // Called from the connection worker thread
+            cout << "Got signal: " << sig.name() << endl;
+            auto args = sig.arguments ();
+            if (!args.empty()) {
+                cout << "Arguments: " << endl;
+                for (auto& arg : args) {
+                    cout << "    " << arg->str() << endl;
+                }
+                cout << endl;
             }
-            cout << endl;
-        }
-    });
+        });
     while (continue_sleep_loop)
         sleep (1);
 }
@@ -438,11 +438,12 @@ static void monitor (ubus::Connection& conn, appargs_t& opt)
     sigaction (SIGINT, &sa, nullptr);
 
     // Install message callback function
-    cmh.set_message_cb ([](ubus::Message& msg)->bool{
-                            cout << msg.describe() << endl;
-                            cout << endl;
-                            return true;
-                        });
+    cmh.set_message_cb ([](ubus::Message& msg)->bool
+        {
+            cout << msg.describe() << endl;
+            cout << endl;
+            return true;
+        });
 
     // Sleep until Ctrl-C (SIGINT)
     while (continue_sleep_loop)

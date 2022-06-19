@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -58,7 +58,7 @@ static constexpr const char* introspect_data =
     "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
     " \"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
     "<node name=\"/se/ultramarin/ultrabus/example_service\">\n"
-    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "  <interface name=\"" DBUS_INTERFACE_INTROSPECTABLE "\">\n"
     "    <method name=\"Introspect\">\n"
     "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
     "    </method>\n"
@@ -111,9 +111,10 @@ int main (int argc, char* argv[])
     //
     ubus::CallbackObjectHandler oh (conn);
     // First, set a callback that will handle messages sent to the registered object path
-    oh.set_message_cb ([&](ubus::Message& msg)->bool{
-                           return handle_method_call (conn, msg, quit);
-                       });
+    oh.set_message_cb ([&](ubus::Message& msg)->bool
+        {
+            return handle_method_call (conn, msg, quit);
+        });
     // Register the object path
     oh.register_opath (object_root);
 
@@ -137,7 +138,7 @@ static bool handle_method_call (ubus::Connection& conn, ubus::Message& msg, bool
     auto iface = msg.interface ();
 
     if (msg.name() == "Introspect") {
-        if (!iface.empty() && iface != "org.freedesktop.DBus.Introspectable")
+        if (!iface.empty() && iface != DBUS_INTERFACE_INTROSPECTABLE)
             reply = ubus::Message (msg, true, service_error_name, "Invalid interface/method");
         else
             reply = handle_introspect (msg);

@@ -251,12 +251,13 @@ namespace ultrabus {
         volatile bool got_reply = false;
         Message reply;
 
-        auto result = send (msg, [&](Message& r){
-                                     std::unique_lock<std::mutex> lock (m);
-                                     reply = std::move (r);
-                                     got_reply = true;
-                                     cv.notify_one ();
-                                 }, timeout);
+        auto result = send (msg, [&](Message& r)
+            {
+                std::unique_lock<std::mutex> lock (m);
+                reply = std::move (r);
+                got_reply = true;
+                cv.notify_one ();
+            }, timeout);
         if (result) {
             // Return an error response
             return Message (const_cast<Message&>(msg), true,
@@ -360,11 +361,12 @@ namespace ultrabus {
         auto flags = dbus_watch_get_flags (watch);
         bool enabled = dbus_watch_get_enabled (watch);
         if (enabled && (flags & DBUS_WATCH_READABLE)) {
-            ior.conn.wait_for_rx ([this, watch](iomultiplex::io_result_t& ior)->bool{
-                                      if (!ior.errnum)
-                                          dbus_watch_rx_ready_cb (ior, watch);
-                                      return false;
-                                  });
+            ior.conn.wait_for_rx ([this, watch](iomultiplex::io_result_t& ior)->bool
+                {
+                    if (!ior.errnum)
+                        dbus_watch_rx_ready_cb (ior, watch);
+                    return false;
+                });
         }
     }
 
@@ -384,11 +386,12 @@ namespace ultrabus {
         auto flags = dbus_watch_get_flags (watch);
         bool enabled = dbus_watch_get_enabled (watch);
         if (enabled && (flags&DBUS_WATCH_WRITABLE)) {
-            ior.conn.wait_for_tx ([this, watch](iomultiplex::io_result_t& ior)->bool{
-                                      if (!ior.errnum)
-                                          dbus_watch_tx_ready_cb (ior, watch);
-                                      return false;
-                                  });
+            ior.conn.wait_for_tx ([this, watch](iomultiplex::io_result_t& ior)->bool
+                {
+                    if (!ior.errnum)
+                        dbus_watch_tx_ready_cb (ior, watch);
+                    return false;
+                });
         }
     }
 
@@ -414,18 +417,20 @@ namespace ultrabus {
         if (dbus_watch_get_enabled(watch)) {
             auto flags = dbus_watch_get_flags (watch);
             if (flags & DBUS_WATCH_READABLE) {
-                fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool{
-                                     if (!ior.errnum)
-                                         self->dbus_watch_rx_ready_cb (ior, watch);
-                                     return false;
-                                 });
+                fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool
+                    {
+                        if (!ior.errnum)
+                            self->dbus_watch_rx_ready_cb (ior, watch);
+                        return false;
+                    });
             }
             if (flags & DBUS_WATCH_WRITABLE) {
-                fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool{
-                                     if (!ior.errnum)
-                                         self->dbus_watch_tx_ready_cb (ior, watch);
-                                     return false;
-                                 });
+                fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool
+                    {
+                        if (!ior.errnum)
+                            self->dbus_watch_tx_ready_cb (ior, watch);
+                        return false;
+                    });
             }
         }
 
@@ -466,19 +471,21 @@ namespace ultrabus {
             DBG_LOG ("Toggle watch - enable");
             if (flags & DBUS_WATCH_READABLE) {
                 DBG_LOG ("    Enble watch for RX");
-                fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool{
-                                     if (!ior.errnum)
-                                         self->dbus_watch_rx_ready_cb (ior, watch);
-                                     return false;
-                                 });
+                fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool
+                    {
+                        if (!ior.errnum)
+                            self->dbus_watch_rx_ready_cb (ior, watch);
+                        return false;
+                    });
             }
             if (flags & DBUS_WATCH_WRITABLE) {
                 DBG_LOG ("    Enble watch for TX");
-                fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool{
-                                     if (!ior.errnum)
-                                         self->dbus_watch_tx_ready_cb (ior, watch);
-                                     return false;
-                                 });
+                fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool
+                    {
+                        if (!ior.errnum)
+                            self->dbus_watch_tx_ready_cb (ior, watch);
+                        return false;
+                    });
             }
         }else{
 #ifdef TRACE_DEBUG
@@ -516,17 +523,15 @@ namespace ultrabus {
             auto interval = dbus_timeout_get_interval (timeout);
             if (interval >= 0) {
                 DBG_LOG ("Set timer: %d", interval);
-                timer_id = self->timer_set->set (interval,
-                                                 interval,
-                                                 [self, timeout](iomultiplex::TimerSet& ts,
-                                                                 long timer_id)
-                {
-                    // Timer expiration callback
-                    DBG_LOG ("timed out");
-                    dbus_timeout_handle (timeout);
-                    while (dbus_connection_dispatch(self->conn) == DBUS_DISPATCH_DATA_REMAINS)
-                        ;
-                });
+                timer_id = self->timer_set->set (interval, interval,
+                                                 [self, timeout](iomultiplex::TimerSet& ts, long timer_id)
+                    {
+                        // Timer expiration callback
+                        DBG_LOG ("timed out");
+                        dbus_timeout_handle (timeout);
+                        while (dbus_connection_dispatch(self->conn) == DBUS_DISPATCH_DATA_REMAINS)
+                            ;
+                    });
             }
         }else{
             if (timer_id >= 0) {
@@ -581,17 +586,15 @@ namespace ultrabus {
             auto interval = dbus_timeout_get_interval (timeout);
             DBG_LOG ("Enable timer, interval: %d", (int)interval);
             if (interval >= 0) {
-                timer_id = self->timer_set->set (interval,
-                                                 interval,
-                                                 [self, timeout](iomultiplex::TimerSet& ts,
-                                                                 long timer_id)
-                {
-                    // Timer expiration callback
-                    DBG_LOG ("timed out");
-                    dbus_timeout_handle (timeout);
-                    while (dbus_connection_dispatch(self->conn) == DBUS_DISPATCH_DATA_REMAINS)
-                        ;
-                });
+                timer_id = self->timer_set->set (interval, interval,
+                                                 [self, timeout](iomultiplex::TimerSet& ts, long timer_id)
+                    {
+                        // Timer expiration callback
+                        DBG_LOG ("timed out");
+                        dbus_timeout_handle (timeout);
+                        while (dbus_connection_dispatch(self->conn) == DBUS_DISPATCH_DATA_REMAINS)
+                            ;
+                    });
             }
         }else{
             // Timer already cancelled above
