@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -44,18 +44,31 @@ namespace ultrabus {
 
         /**
          * Destructor.
-         * Remove all added match rules and unregister this handler from the DBus.
+         * Remove all added match rules and unregister
+         * this handler from the DBus.
          */
         virtual ~ObjectHandler ();
 
         /**
          * Register an object path to be handled by this instance.
+         * <b>Note:</b><br/>
+         * If the object path is already registered with an earlier call
+         * to this method on this instace, this method will return a
+         * success.<br/>
+         * But if the object path is already registered from another
+         * instance of this class, or with a direct call to the
+         * underlaying DBus API, this method will fail.
+         *
          * @param opath The object path to register.
-         * @param fallback If <code>true</code>, the <code>on_message()</code>
-         *                 will be called for all objects in this subdirectory.
-         *                 If <code>false</code>, the <code>on_message()</code>
+         * @param fallback If <code>false</code>, the <code>on_message()</code>
          *                 will be called for this specific object path.
-         * @return 0 on success, -1 on failure.
+         *                 This is the default value.<br/>
+         *                 If <code>true</code>, the <code>on_message()</code>
+         *                 will be called for all objects in this subdirectory.
+         * @return 0 on success, -1 on failure.<br/>
+         *
+         * @see <a href=https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
+         *       rel="noopener noreferrer" target="_blank">D-Bus Specification - Valid Object Paths</a>
          */
         int register_opath (const std::string& opath, bool fallback=false);
 
@@ -73,8 +86,11 @@ namespace ultrabus {
         std::set<std::string> opaths;
         std::mutex opaths_lock;
 
-        static void dbus_on_unregister (DBusConnection* connection, void* user_data);
-        static DBusHandlerResult dbus_on_message (DBusConnection* connection, DBusMessage* message, void* user_data);
+        static void dbus_on_unregister (DBusConnection* connection,
+                                        void* user_data);
+        static DBusHandlerResult dbus_on_message (DBusConnection* connection,
+                                                  DBusMessage* message,
+                                                  void* user_data);
     };
 
 }
