@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2015-2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -281,9 +281,9 @@ namespace ultrabus {
         /**
          * Set the error name if this message is an error message.
          * This method is irrelevant if the message isn't an error message.
-         * @param name The name of the error.
+         * @param 0 on success. -1 if the error name is invalid.
          */
-        void error_name (const std::string& name);
+        int error_name (const std::string& name);
 
         /**
          * Return the error description, if any.

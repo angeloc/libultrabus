@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2015-2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -151,10 +151,21 @@ namespace ultrabus {
                       const std::string& error_name,
                       const std::string& error_message)
     {
-        if (is_error)
+        if (is_error) {
+            DBusError err;
+            dbus_error_init (&err);
+            if (!dbus_validate_error_name(error_name.c_str(), &err)) {
+                std::string msg =
+                    std::string(err.name) +
+                    std::string(": ") +
+                    std::string(err.message);
+                dbus_error_free (&err);
+                throw std::invalid_argument (msg);
+            }
             msg_handle = dbus_message_new_error (message, error_name.c_str(), error_message.c_str());
-        else
+        }else{
             msg_handle = dbus_message_new_method_return (message);
+        }
         if (msg_handle == nullptr)
             throw std::bad_alloc ();
     }
@@ -618,14 +629,18 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    void Message::error_name (const std::string& error)
+    int Message::error_name (const std::string& error)
     {
+        if (!error.empty() && !dbus_validate_error_name(error.c_str(), nullptr))
+            return -1;
+
         if (msg_handle) {
             if (error.empty())
                 dbus_message_set_error_name (msg_handle, nullptr);
             else
                 dbus_message_set_error_name (msg_handle, error.c_str());
         }
+        return 0;
     }
 
 
