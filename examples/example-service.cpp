@@ -91,9 +91,17 @@ int main (int argc, char* argv[])
     // Create a DBus connection object and connect to the session bus
     //
     ubus::Connection conn;
-    if (conn.connect()) {
-        cerr << "Unable to connect DBus" << endl;
-        exit (1);
+    if (argc > 1) {
+        // Connect to a specific bus address
+        if (conn.connect(argv[1])) {
+            cerr << "Unable to connect DBus" << endl;
+            exit (1);
+        }
+    }else{
+        if (conn.connect()) {
+            cerr << "Unable to connect DBus" << endl;
+            exit (1);
+        }
     }
 
     //
