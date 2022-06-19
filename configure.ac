@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+# Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
 #
 # This file is part of libultrabus.
 #
@@ -188,7 +188,7 @@ AM_COND_IF([ENABLE_UTILS_SET],
 	[AC_MSG_NOTICE([ Build utilities...................... no])]
 )
 AM_COND_IF([ENABLE_EXAMPLES_SET],
-	[AC_MSG_NOTICE([ Build example applications........... yes (test applications are not installed)])],
+	[AC_MSG_NOTICE([ Build example applications........... yes (example applications are not installed)])],
 	[AC_MSG_NOTICE([ Build example applications........... no])]
 )
 AC_MSG_NOTICE([])
