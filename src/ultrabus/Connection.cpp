@@ -257,11 +257,16 @@ namespace ultrabus {
                 reply = std::move (r);
                 got_reply = true;
                 cv.notify_one ();
-            }, timeout);
+            },
+            timeout);
+
         if (result) {
             // Return an error response
-            return Message (const_cast<Message&>(msg), true,
-                            "ENOMEM", "Unable to allocate memory for message");
+            Message reply (dbus_message_new(DBUS_MESSAGE_TYPE_ERROR));
+            reply.dec_ref (); // ref count increased in Message constructor
+            reply.error_name ("se.ultramarin.ultrabus.Error.ENOMEM");
+            reply << std::string("Unable to allocate memory for DBus message");
+            return reply;
         }
         std::unique_lock<std::mutex> lock (m);
         while (!got_reply)
