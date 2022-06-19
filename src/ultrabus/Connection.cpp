@@ -203,31 +203,6 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    int Connection::send (const Message& msg,
-                          std::function<void (ultrabus::Message&)> reply_cb,
-                          int timeout)
-    {
-        if (!reply_cb)
-            return send (msg);
-
-        bool result;
-        DBusPendingCall* pending = nullptr;
-        std::lock_guard<std::mutex> lock (pending_mutex);
-        result = dbus_connection_send_with_reply (conn,
-                                                  const_cast<Message&>(msg).handle(),
-                                                  &pending,
-                                                  timeout);
-        if (!result || !pending)
-            return -1;
-
-        pending_messages.emplace (pending, reply_cb);
-        dbus_pending_call_set_notify (pending, pending_msg_callback, this, nullptr);
-        return 0;
-    }
-
-
-    //-----------------------------------------------------------------------
-    //-----------------------------------------------------------------------
     int Connection::send (const Message& msg)
     {
         uint32_t serial = 0;
@@ -239,6 +214,58 @@ namespace ultrabus {
         }else{
             return -1;
         }
+    }
+
+
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    int Connection::send (const Message& msg,
+                          std::function<void (ultrabus::Message&)> reply_cb,
+                          int timeout)
+    {
+        if (!reply_cb)
+            return send (msg);
+
+        // Make sure we post the message in the scope of the worker thread
+        //
+        if (io_handler().same_context()) {
+            bool result;
+            DBusPendingCall* pending = nullptr;
+            std::lock_guard<std::mutex> lock (pending_mutex);
+            result = dbus_connection_send_with_reply (conn,
+                                                      const_cast<Message&>(msg).handle(),
+                                                      &pending,
+                                                      timeout);
+            if (!result || !pending)
+                return -1;
+            pending_messages.emplace (pending, reply_cb);
+            dbus_pending_call_set_notify (pending, pending_msg_callback, this, nullptr);
+        }else{
+            timer_set->set (0, [this, msg, reply_cb, timeout](iomultiplex::TimerSet& ts,
+                                                              long timer_id)
+                {
+                    bool result;
+                    DBusPendingCall* pending = nullptr;
+                    std::unique_lock<std::mutex> lock (pending_mutex);
+                    result = dbus_connection_send_with_reply (conn,
+                                                              const_cast<Message&>(msg).handle(),
+                                                              &pending,
+                                                              timeout);
+                    if (!result || !pending) {
+                        // Return an error response
+                        Message reply (dbus_message_new(DBUS_MESSAGE_TYPE_ERROR));
+                        reply.dec_ref (); // ref count increased in Message constructor
+                        reply.error_name ("se.ultramarin.ultrabus.Error.ENOMEM");
+                        reply << std::string("Unable to allocate memory for DBus message");
+                        lock.unlock ();
+                        reply_cb (reply);
+                        return;
+                    }
+                    pending_messages.emplace (pending, reply_cb);
+                    dbus_pending_call_set_notify (pending, pending_msg_callback, this, nullptr);
+                });
+        }
+        return 0;
     }
 
 
