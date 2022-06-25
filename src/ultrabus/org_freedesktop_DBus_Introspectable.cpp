@@ -23,9 +23,13 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    org_freedesktop_DBus_Introspectable::org_freedesktop_DBus_Introspectable (Connection& connection)
-        : conn (connection)
+    org_freedesktop_DBus_Introspectable::org_freedesktop_DBus_Introspectable (Connection& connection,
+                                                                              const int msg_timeout)
+        : conn (connection),
+          timeout (msg_timeout)
     {
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -38,7 +42,7 @@ namespace ultrabus {
 
         Message msg (service, object_path, DBUS_INTERFACE_INTROSPECTABLE, "Introspect");
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -77,7 +81,8 @@ namespace ultrabus {
                         retval = data.str ();
                     }
                     callback (retval);
-                });
+                },
+                timeout);
         }
     }
 

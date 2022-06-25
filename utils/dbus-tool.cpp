@@ -69,7 +69,7 @@ int main (int argc, char* argv[])
                 exit (1);
             }
         }else{
-            conn.connect (opt.bus_address);
+            conn.connect (opt.bus_address, opt.timeout, true);
             if (!conn.is_connected()) {
                 cerr << "Error: Failed to connect to bus " << opt.bus_address << endl;
                 exit (1);
@@ -127,7 +127,7 @@ int main (int argc, char* argv[])
 //------------------------------------------------------------------------------
 static void list_services (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus dbus (conn);
+    ubus::org_freedesktop_DBus dbus (conn, opt.timeout);
     auto names = opt.activatable ? dbus.list_activatable_names() : dbus.list_names();
     if (names.err()) {
         cerr << names.what() << endl;
@@ -144,7 +144,7 @@ static void list_services (ubus::Connection& conn, appargs_t& opt)
 //------------------------------------------------------------------------------
 static void call_method (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::ObjectProxy op (conn, opt.service, opt.opath, opt.iface);
+    ubus::ObjectProxy op (conn, opt.service, opt.opath, opt.iface, opt.timeout);
     ubus::Message msg (opt.service, opt.opath, opt.iface, opt.name);
     for (auto& arg : opt.args)
         msg << arg;
@@ -165,7 +165,7 @@ static void call_method (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void introspect (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::ObjectProxy op (conn, opt.service, opt.opath, DBUS_INTERFACE_INTROSPECTABLE);
+    ubus::ObjectProxy op (conn, opt.service, opt.opath, DBUS_INTERFACE_INTROSPECTABLE, opt.timeout);
     auto reply = op.call ("Introspect");
     if (reply.is_error()) {
         cerr << "Error: " << reply.error_name() << " - " << reply.error_msg() << endl;
@@ -189,7 +189,7 @@ static void introspect (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void get_property (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus_Properties properties (conn);
+    ubus::org_freedesktop_DBus_Properties properties (conn, opt.timeout);
 
     if (!opt.name.empty()) {
         //
@@ -248,7 +248,7 @@ static void get_property (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void set_property (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus_Properties prop (conn);
+    ubus::org_freedesktop_DBus_Properties prop (conn, opt.timeout);
     ubus::dbus_basic property_value;
 
     if (opt.args[0] == "true") {
@@ -280,7 +280,7 @@ static void set_property (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void objects (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::ObjectProxy op (conn, opt.service, opt.opath, "org.freedesktop.DBus.ObjectManager");
+    ubus::ObjectProxy op (conn, opt.service, opt.opath, "org.freedesktop.DBus.ObjectManager", opt.timeout);
 
     auto reply = op.call ("GetManagedObjects");
     if (reply.is_error()) {
@@ -301,7 +301,7 @@ static void objects (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void listen_for_signals (ubus::Connection& conn, const appargs_t& opt)
 {
-    ubus::ObjectProxy op (conn, opt.service, opt.opath);
+    ubus::ObjectProxy op (conn, opt.service, opt.opath, "", opt.timeout);
 
     // Install signal handler to exit gracefully on Ctrl-C
     continue_sleep_loop = true;
@@ -333,7 +333,7 @@ static void listen_for_signals (ubus::Connection& conn, const appargs_t& opt)
 //------------------------------------------------------------------------------
 static void start_service (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus dbus (conn);
+    ubus::org_freedesktop_DBus dbus (conn, opt.timeout);
     auto result = dbus.start_service_by_name (opt.service);
     if (result.err()) {
         if (!opt.quiet)
@@ -361,7 +361,7 @@ static void start_service (ubus::Connection& conn, appargs_t& opt)
 //------------------------------------------------------------------------------
 static void print_owner (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus dbus (conn);
+    ubus::org_freedesktop_DBus dbus (conn, opt.timeout);
     auto owner = dbus.get_name_owner (opt.service);
     if (owner.err()) {
         cerr << owner.what() << endl;
@@ -375,7 +375,7 @@ static void print_owner (ubus::Connection& conn, appargs_t& opt)
 //------------------------------------------------------------------------------
 static void print_names (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus dbus (conn);
+    ubus::org_freedesktop_DBus dbus (conn, opt.timeout);
     string bus_name = opt.service;
     if (!opt.service.empty() && opt.service[0]!=':') {
         auto owner = dbus.get_name_owner (opt.service);
@@ -402,7 +402,7 @@ static void print_names (ubus::Connection& conn, appargs_t& opt)
 //------------------------------------------------------------------------------
 static void ping (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus_Peer peer (conn);
+    ubus::org_freedesktop_DBus_Peer peer (conn, opt.timeout);
 
     auto result = peer.ping (opt.service);
     if (result.err()) {
@@ -419,7 +419,7 @@ static void ping (ubus::Connection& conn, appargs_t& opt)
 //------------------------------------------------------------------------------
 static void monitor (ubus::Connection& conn, appargs_t& opt)
 {
-    ubus::org_freedesktop_DBus dbus (conn);
+    ubus::org_freedesktop_DBus dbus (conn, opt.timeout);
     ubus::CallbackMessageHandler cmh (conn);
 
     auto result = dbus.become_monitor ();

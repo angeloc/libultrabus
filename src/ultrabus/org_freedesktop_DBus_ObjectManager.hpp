@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -82,10 +82,17 @@ namespace ultrabus {
          * Constructs an object used for calling methods in the standard
          * DBUs interface <code>org.freedesktop.DBus.ObjectManager</code>.
          * @param connection A DBus connection.
+         * @param msg_timeout A timeout value in milliseconds used
+         *                    when sending messages on the bus using
+         *                    this instance.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a
+         *                    default timeout value will be used by
+         *                    the underlaying dbus library (libdbus-1).
          * @see <a href=https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
          *       rel="noopener noreferrer" target="_blank">D-Bus Specification - org.freedesktop.DBus.ObjectManager</a>
          */
-        org_freedesktop_DBus_ObjectManager (Connection& connection);
+        org_freedesktop_DBus_ObjectManager (Connection& connection,
+                                            const int msg_timeout=DBUS_TIMEOUT_USE_DEFAULT);
 
         /**
          * Destructor.
@@ -215,12 +222,35 @@ namespace ultrabus {
         int remove_interfaces_removed_callback (const std::string& service,
                                                 const std::string& object_path);
 
+        /**
+         * Get the timeout used when sending messages on the DBus using instance.
+         * @return A timeout value in milliseconds.
+         *         DBUS_TIMEOUT_USE_DEFAULT(-1) means that a default
+         *         timeout value is used by the underlaying
+         *         dbus library (libdbus-1).
+         */
+        int msg_timeout () {
+            return timeout;
+        }
+
+        /**
+         * Set the timeout used when sending messages on the DBus using this instance.
+         * @param millieconds A timeout value in milliseconds.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                    timeout value is used by the underlaying
+         *                    dbus library (libdbus-1).
+         */
+        void msg_timeout (int milliseconds) {
+            timeout = milliseconds;
+        }
+
 
     protected:
         virtual bool on_signal (Message& msg);
 
 
     private:
+        int timeout;
         std::mutex iface_mutex;
         std::map<std::pair<std::string, std::string>, iface_added_cb>   iface_added_callbacks;
         std::map<std::pair<std::string, std::string>, iface_removed_cb> iface_removed_callbacks;

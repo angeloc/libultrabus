@@ -31,6 +31,7 @@ struct appargs_t {
 
     DBusBusType bus;
     std::string bus_address;
+    int timeout;
 
     std::string cmd;
     std::string service;

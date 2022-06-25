@@ -39,9 +39,10 @@ void appargs_t::print_usage_and_exit (ostream& out, int exit_code)
     out << "Usage: " << PROGRAM_NAME << " [OPTIONS] <command> [command argument ...]" << endl;
     out << endl;
     out << "Common options:" << endl;
-    out << "  -y, --system         Connect to the system bus instead of the session bus." << endl;
-    out << "  -b, --bus=ADDRESS    Connect to a bus on this address. Ignoring parameter --system." << endl;
-    out << "  -h, --help           Print this help message and exit." << endl;
+    out << "  -y, --system                  Connect to the system bus instead of the session bus." << endl;
+    out << "  -b, --bus=ADDRESS             Connect to a specific bus address. Ignoring parameter --system." << endl;
+    out << "  -t, --timeout=MILLISECONDS    Set a specific timeout when waiting for message replies." << endl;
+    out << "  -h, --help                    Print this help message and exit." << endl;
     out << endl;
     out << "Commands:" << endl;
     out << "  list" << endl;
@@ -105,6 +106,7 @@ void appargs_t::print_usage_and_exit (ostream& out, int exit_code)
 //------------------------------------------------------------------------------
 appargs_t::appargs_t (int argc, char* argv[])
     : bus (DBUS_BUS_SESSION),
+      timeout (DBUS_TIMEOUT_USE_DEFAULT),
       all (false),
       activatable (false),
       print_signature (false),
@@ -114,6 +116,7 @@ appargs_t::appargs_t (int argc, char* argv[])
     static struct option long_options[] = {
         { "system",      no_argument,       0, 'y'},
         { "bus",         required_argument, 0, 'b'},
+        { "timeout",     required_argument, 0, 't'},
         { "all",         no_argument,       0, 'a'},
         { "activatable", no_argument,       0, 'x'},
         { "signature",   no_argument,       0, 's'},
@@ -122,7 +125,7 @@ appargs_t::appargs_t (int argc, char* argv[])
         { "help",        no_argument,       0, 'h'},
         { 0, 0, 0, 0}
     };
-    static const char* arg_format = "yb:axsqrh";
+    static const char* arg_format = "yb:t:axsqrh";
     bool be_quiet = false;
 
     while (true) {
@@ -138,6 +141,13 @@ appargs_t::appargs_t (int argc, char* argv[])
             break;
         case 'b':
             bus_address = std::string (optarg);
+            break;
+        case 't':
+            timeout = atoi (optarg);
+            if (timeout <= 0) {
+                cerr << "Error: Invalid timeout argument" << endl;
+                exit (1);
+            }
             break;
         case 'x':
             activatable = true;

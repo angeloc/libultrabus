@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -38,8 +38,15 @@ namespace ultrabus {
         /**
          * Constructor.
          * @param connection A DBus connection.
+         * @param msg_timeout A timeout value in milliseconds used
+         *                    when sending messages on the bus using
+         *                    this instance.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a
+         *                    default timeout value will be used by
+         *                    the underlaying dbus library (libdbus-1).
          */
-        org_freedesktop_DBus_Peer (Connection& connection);
+        org_freedesktop_DBus_Peer (Connection& connection,
+                                   const int msg_timeout=DBUS_TIMEOUT_USE_DEFAULT);
 
         /**
          * Ping a service on the message bus.
@@ -122,9 +129,32 @@ namespace ultrabus {
         int get_machine_id (const std::string& service,
                             std::function<void (retvalue<std::string>& result)> callback);
 
+        /**
+         * Get the timeout used when sending messages on the DBus using instance.
+         * @return A timeout value in milliseconds.
+         *         DBUS_TIMEOUT_USE_DEFAULT(-1) means that a default
+         *         timeout value is used by the underlaying
+         *         dbus library (libdbus-1).
+         */
+        int msg_timeout () {
+            return timeout;
+        }
+
+        /**
+         * Set the timeout used when sending messages on the DBus using this instance.
+         * @param millieconds A timeout value in milliseconds.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                    timeout value is used by the underlaying
+         *                    dbus library (libdbus-1).
+         */
+        void msg_timeout (int milliseconds) {
+            timeout = milliseconds;
+        }
+
 
     private:
         Connection& conn;
+        int timeout;
     };
 
 

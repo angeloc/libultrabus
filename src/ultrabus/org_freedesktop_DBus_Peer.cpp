@@ -24,9 +24,13 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    org_freedesktop_DBus_Peer::org_freedesktop_DBus_Peer (Connection& connection)
-        : conn (connection)
+    org_freedesktop_DBus_Peer::org_freedesktop_DBus_Peer (Connection& connection,
+                                                          const int msg_timeout)
+        : conn (connection),
+          timeout (msg_timeout)
     {
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -39,7 +43,7 @@ namespace ultrabus {
         Message msg (service, "/", DBUS_INTERFACE_PEER, "Ping");
 
         auto start = std::chrono::high_resolution_clock::now ();
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         auto stop = std::chrono::high_resolution_clock::now ();
 
         if (!reply.is_error()){
@@ -71,7 +75,8 @@ namespace ultrabus {
                     else
                         retval = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
                     callback (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -83,7 +88,7 @@ namespace ultrabus {
         retvalue<std::string> retval;
         Message msg (service, "/", DBUS_INTERFACE_PEER, "GetMachineId");
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -121,7 +126,8 @@ namespace ultrabus {
                         retval = id.str ();
                     }
                     callback (retval);
-                });
+                },
+                timeout);
         }
     }
 

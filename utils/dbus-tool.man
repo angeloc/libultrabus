@@ -23,6 +23,12 @@ on DBus signals.
 .B -y, --system
 Connect to the system bus instead of the session bus.
 .TP
+.B -b, --bus=ADDRESS
+Connect to a specific bus address. Ignoring parameter -y, --system.
+.TP
+.B -t, --timeout=MILLISECONDS
+Set a specific timeout when waiting for message replies.
+.TP
 .B -h, --help
 Print help and exit.
 

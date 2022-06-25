@@ -64,6 +64,7 @@ namespace ultrabus {
          * @return 0 on success, -1 on failure.
          */
         int connect (const std::string& bus_address,
+                     const int timeout=DBUS_TIMEOUT_USE_DEFAULT,
                      const bool private_connection=false,
                      const bool exit_on_disconnect=true);
 

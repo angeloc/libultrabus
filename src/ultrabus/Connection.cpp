@@ -105,6 +105,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
     int Connection::connect (const std::string& bus_address,
+                             const int timeout,
                              const bool private_connection,
                              const bool exit_on_disconnect)
     {
@@ -135,7 +136,7 @@ namespace ultrabus {
         //
         DBG_LOG ("Register the connection with the bus");
         Message hello_msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
-        auto reply = send_and_wait (hello_msg);
+        auto reply = send_and_wait (hello_msg, timeout);
         if (reply.is_error()) {
             DBG_LOG ("Error registering the connection with the bus: %s - %s",
                      reply.error_name().c_str(), reply.error_msg().c_str());

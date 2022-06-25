@@ -52,9 +52,13 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    org_freedesktop_DBus_ObjectManager::org_freedesktop_DBus_ObjectManager (Connection& connection)
-        : MessageHandler (connection)
+    org_freedesktop_DBus_ObjectManager::org_freedesktop_DBus_ObjectManager (Connection& connection,
+                                                                            const int msg_timeout)
+        : MessageHandler (connection),
+          timeout (msg_timeout)
     {
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -104,7 +108,7 @@ namespace ultrabus {
             const std::string& object_path)
     {
         Message msg (service, object_path, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         return handle_get_managed_objects_result (reply);
     }
 
@@ -124,7 +128,8 @@ namespace ultrabus {
                 {
                     auto retval = handle_get_managed_objects_result (reply);
                     callback (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -147,7 +152,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (service, [this, opath, cb](retvalue<std::string>& bus_name)
             {
                 // Called from worker thread
@@ -186,7 +191,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (service, [this, opath, cb](retvalue<std::string>& bus_name)
             {
                 // Called from worker thread
@@ -221,7 +226,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (service, [this, opath](retvalue<std::string>& bus_name)
             {
                 // Called from worker thread
@@ -255,7 +260,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (service, [this, opath](retvalue<std::string>& bus_name)
             {
                 // Called from worker thread

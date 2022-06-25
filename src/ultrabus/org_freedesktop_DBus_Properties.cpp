@@ -37,9 +37,13 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    org_freedesktop_DBus_Properties::org_freedesktop_DBus_Properties (Connection& connection)
-        : MessageHandler (connection)
+    org_freedesktop_DBus_Properties::org_freedesktop_DBus_Properties (Connection& connection,
+                                                                      const int msg_timeout)
+        : MessageHandler (connection),
+          timeout (msg_timeout)
     {
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -74,7 +78,7 @@ namespace ultrabus {
         Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "GetAll");
         msg.append_arg (interface);
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         return handle_get_all_result (reply);
     }
 
@@ -96,7 +100,8 @@ namespace ultrabus {
                 {
                     auto retval = handle_get_all_result (reply);
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -112,7 +117,7 @@ namespace ultrabus {
         Message msg (service, object_path, DBUS_INTERFACE_PROPERTIES, "Get");
         msg.append_arg (interface, property_name);
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -149,7 +154,8 @@ namespace ultrabus {
                         retval.err (-1, "Invalid message reply argument");
                     }
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -174,7 +180,7 @@ namespace ultrabus {
                const_cast<dbus_variant&>(value).value().signature().c_str(),
                value.str().c_str());
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval = -1;
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
@@ -207,7 +213,8 @@ namespace ultrabus {
                         retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
                     }
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -241,7 +248,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (
                 service,
                 [this, object_path, callback](retvalue<std::string>& bus_name)
@@ -289,7 +296,7 @@ namespace ultrabus {
         }
 
         // Get the unique bus name for the service
-        org_freedesktop_DBus dbus (conn);
+        org_freedesktop_DBus dbus (conn, timeout);
         return dbus.get_name_owner (
                 service,
                 [this, object_path](retvalue<std::string>& bus_name)

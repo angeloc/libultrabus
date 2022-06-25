@@ -39,9 +39,13 @@ namespace ultrabus {
 
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    org_freedesktop_DBus::org_freedesktop_DBus (Connection& connection)
-        : MessageHandler (connection)
+    org_freedesktop_DBus::org_freedesktop_DBus (Connection& connection,
+                                                const int msg_timeout)
+        : MessageHandler (connection),
+          timeout (msg_timeout)
     {
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -93,10 +97,11 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
     static retvalue<int> sync_call_method_reply_with_void (Connection& conn,
-                                                           Message& msg)
+                                                           Message& msg,
+                                                           int timeout)
     {
         retvalue<int> retval (0);
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval = -1;
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
@@ -109,7 +114,8 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     static int async_call_method_reply_with_void (Connection& conn,
                                                   Message& msg,
-                                                  std::function<void (retvalue<int>& retval)>& cb)
+                                                  std::function<void (retvalue<int>& retval)>& cb,
+                                                  int timeout)
     {
         if (cb == nullptr) {
             return conn.send (msg);
@@ -122,7 +128,8 @@ namespace ultrabus {
                         retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
                     }
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -130,10 +137,11 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
     static retvalue<uint32_t> sync_call_method_reply_with_u32 (Connection& conn,
-                                                               Message& msg)
+                                                               Message& msg,
+                                                               int timeout)
     {
         retvalue<uint32_t> retval (0);
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         handle_u32_reply (reply, retval);
         return retval;
     }
@@ -143,7 +151,8 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     static int async_call_method_reply_with_u32 (Connection& conn,
                                                  Message& msg,
-                                                 std::function<void (retvalue<uint32_t>& retval)>& cb)
+                                                 std::function<void (retvalue<uint32_t>& retval)>& cb,
+                                                 int timeout)
     {
         if (cb == nullptr) {
             return conn.send (msg);
@@ -153,7 +162,8 @@ namespace ultrabus {
                     retvalue<uint32_t> retval;
                     handle_u32_reply (reply, retval);
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -161,10 +171,11 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
     static retvalue<std::string> sync_call_method_reply_with_str (Connection& conn,
-                                                                  Message& msg)
+                                                                  Message& msg,
+                                                                  int timeout)
     {
         retvalue<std::string> retval;
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         handle_str_reply (reply, retval);
         return retval;
     }
@@ -174,7 +185,8 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     static int async_call_method_reply_with_str (Connection& conn,
                                                  Message& msg,
-                                                 std::function<void (retvalue<std::string>& retval)>& cb)
+                                                 std::function<void (retvalue<std::string>& retval)>& cb,
+                                                 int timeout)
     {
         if (cb == nullptr) {
             return conn.send (msg);
@@ -184,7 +196,8 @@ namespace ultrabus {
                     retvalue<std::string> retval;
                     handle_str_reply (reply, retval);
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -194,7 +207,7 @@ namespace ultrabus {
     retvalue<std::string> org_freedesktop_DBus::hello ()
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
-        return sync_call_method_reply_with_str (conn, msg);
+        return sync_call_method_reply_with_str (conn, msg, timeout);
     }
 
 
@@ -203,7 +216,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::hello (std::function<void (retvalue<std::string>& retval)> cb)
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "Hello");
-        return async_call_method_reply_with_str (conn, msg, cb);
+        return async_call_method_reply_with_str (conn, msg, cb, timeout);
     }
 
 
@@ -214,7 +227,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RequestName");
         msg.append_arg (bus_name, flags);
-        return sync_call_method_reply_with_u32 (conn, msg);
+        return sync_call_method_reply_with_u32 (conn, msg, timeout);
     }
 
 
@@ -226,7 +239,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RequestName");
         msg.append_arg (bus_name, flags);
-        return async_call_method_reply_with_u32 (conn, msg, cb);
+        return async_call_method_reply_with_u32 (conn, msg, cb, timeout);
     }
 
 
@@ -236,7 +249,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ReleaseName");
         msg << bus_name;
-        return sync_call_method_reply_with_u32 (conn, msg);
+        return sync_call_method_reply_with_u32 (conn, msg, timeout);
     }
 
 
@@ -247,7 +260,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ReleaseName");
         msg << bus_name;
-        return async_call_method_reply_with_u32 (conn, msg, cb);
+        return async_call_method_reply_with_u32 (conn, msg, cb, timeout);
     }
 
 
@@ -259,7 +272,7 @@ namespace ultrabus {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListQueuedOwners");
         msg << bus_name;
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -298,7 +311,8 @@ namespace ultrabus {
                     else for (auto& name : names)
                              retval.get().emplace_back (name.str());
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -310,7 +324,7 @@ namespace ultrabus {
         retvalue<std::set<std::string>> retval;
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListNames");
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -347,7 +361,8 @@ namespace ultrabus {
                     else for (auto& name : names)
                              retval.get().emplace (name.str());
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -359,7 +374,7 @@ namespace ultrabus {
         retvalue<std::set<std::string>> retval;
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListActivatableNames");
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -397,7 +412,8 @@ namespace ultrabus {
                     else for (auto& name : names)
                              retval.get().emplace (name.str());
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -410,7 +426,7 @@ namespace ultrabus {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "NameHasOwner");
         msg << bus_name;
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         handle_boolean_reply (reply, retval);
         return retval;
     }
@@ -432,7 +448,8 @@ namespace ultrabus {
                     retvalue<bool> retval;
                     handle_boolean_reply (reply, retval);
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -444,7 +461,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "StartServiceByName");
         msg.append_arg (service, flags);
-        return sync_call_method_reply_with_u32 (conn, msg);
+        return sync_call_method_reply_with_u32 (conn, msg, timeout);
     }
 
 
@@ -456,7 +473,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "StartServiceByName");
         msg.append_arg (service, flags);
-        return async_call_method_reply_with_u32 (conn, msg, cb);
+        return async_call_method_reply_with_u32 (conn, msg, cb, timeout);
     }
 
 
@@ -471,7 +488,7 @@ namespace ultrabus {
             dict.add (dbus_dict_entry(e.first, e.second));
         msg << dict;
 
-        return sync_call_method_reply_with_void (conn, msg);
+        return sync_call_method_reply_with_void (conn, msg, timeout);
     }
 
 
@@ -487,7 +504,7 @@ namespace ultrabus {
             dict.add (dbus_dict_entry(e.first, e.second));
         msg << dict;
 
-        return async_call_method_reply_with_void (conn, msg, cb);
+        return async_call_method_reply_with_void (conn, msg, cb, timeout);
     }
 
 
@@ -497,7 +514,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
         msg << bus_name;
-        return sync_call_method_reply_with_str (conn, msg);
+        return sync_call_method_reply_with_str (conn, msg, timeout);
     }
 
 
@@ -508,7 +525,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
         msg << bus_name;
-        return async_call_method_reply_with_str (conn, msg, cb);
+        return async_call_method_reply_with_str (conn, msg, cb, timeout);
     }
 
 
@@ -518,7 +535,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixUser");
         msg << service;
-        return sync_call_method_reply_with_u32 (conn, msg);
+        return sync_call_method_reply_with_u32 (conn, msg, timeout);
     }
 
 
@@ -529,7 +546,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixUser");
         msg << service;
-        return async_call_method_reply_with_u32 (conn, msg, cb);
+        return async_call_method_reply_with_u32 (conn, msg, cb, timeout);
     }
 
 
@@ -539,7 +556,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
         msg << service;
-        return sync_call_method_reply_with_u32 (conn, msg);
+        return sync_call_method_reply_with_u32 (conn, msg, timeout);
     }
 
 
@@ -550,7 +567,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
         msg << service;
-        return async_call_method_reply_with_u32 (conn, msg, cb);
+        return async_call_method_reply_with_u32 (conn, msg, cb, timeout);
     }
 
 
@@ -564,7 +581,7 @@ namespace ultrabus {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionCredentials");
         msg << service;
 
-        auto reply = conn.send_and_wait (msg);
+        auto reply = conn.send_and_wait (msg, timeout);
         if (reply.is_error()) {
             retval.err (-1, reply.error_name() + std::string(": ") + reply.error_msg());
             return retval;
@@ -625,7 +642,8 @@ namespace ultrabus {
                         }
                     }
                     cb (retval);
-                });
+                },
+                timeout);
         }
     }
 
@@ -636,7 +654,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "AddMatch");
         msg << rule;
-        return sync_call_method_reply_with_void (conn, msg);
+        return sync_call_method_reply_with_void (conn, msg, timeout);
     }
 
 
@@ -647,7 +665,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "AddMatch");
         msg << rule;
-        return async_call_method_reply_with_void (conn, msg, cb);
+        return async_call_method_reply_with_void (conn, msg, cb, timeout);
     }
 
 
@@ -657,7 +675,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RemoveMatch");
         msg << rule;
-        return sync_call_method_reply_with_void (conn, msg);
+        return sync_call_method_reply_with_void (conn, msg, timeout);
     }
 
 
@@ -668,7 +686,7 @@ namespace ultrabus {
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "RemoveMatch");
         msg << rule;
-        return async_call_method_reply_with_void (conn, msg, cb);
+        return async_call_method_reply_with_void (conn, msg, cb, timeout);
     }
 
 
@@ -677,7 +695,7 @@ namespace ultrabus {
     retvalue<std::string> org_freedesktop_DBus::get_id (void)
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetId");
-        return sync_call_method_reply_with_str (conn, msg);
+        return sync_call_method_reply_with_str (conn, msg, timeout);
     }
 
 
@@ -686,7 +704,7 @@ namespace ultrabus {
     int org_freedesktop_DBus::get_id (std::function<void (retvalue<std::string>& retval)> cb)
     {
         Message msg (DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetId");
-        return async_call_method_reply_with_str (conn, msg, cb);
+        return async_call_method_reply_with_str (conn, msg, cb, timeout);
     }
 
 
@@ -702,7 +720,7 @@ namespace ultrabus {
         msg << rules_arg;
         msg << 0;
 
-        return sync_call_method_reply_with_void (conn, msg);
+        return sync_call_method_reply_with_void (conn, msg, timeout);
     }
 
 
@@ -719,7 +737,7 @@ namespace ultrabus {
         msg << rules_arg;
         msg << 0;
 
-        return async_call_method_reply_with_void (conn, msg, cb);
+        return async_call_method_reply_with_void (conn, msg, cb, timeout);
     }
 
 

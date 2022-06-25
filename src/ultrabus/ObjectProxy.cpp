@@ -28,11 +28,13 @@ namespace ultrabus {
     ObjectProxy::ObjectProxy (Connection& connection,
                               const std::string& service,
                               const std::string& object_path,
-                              const std::string& default_interface)
+                              const std::string& default_interface,
+                              const int msg_timeout)
         : MessageHandler (connection),
           target (service),
           opath (object_path),
-          def_iface (default_interface)
+          def_iface (default_interface),
+          timeout (msg_timeout)
     {
         DBusError err;
         dbus_error_init (&err);
@@ -49,6 +51,9 @@ namespace ultrabus {
             throw std::invalid_argument (err_msg);
         }
         dbus_error_free (&err);
+
+        if (timeout < 0)
+            timeout = DBUS_TIMEOUT_USE_DEFAULT;
     }
 
 
@@ -162,7 +167,7 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     Message ObjectProxy::send_msg_impl (const Message& msg)
     {
-        return conn.send_and_wait (msg);
+        return conn.send_and_wait (msg, timeout);
     }
 
 
@@ -189,6 +194,22 @@ namespace ultrabus {
         cb_lock.unlock ();
         cb (msg);
         return true;
+    }
+
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    int ObjectProxy::msg_timeout ()
+    {
+        return timeout;
+    }
+
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    void ObjectProxy::msg_timeout (int milliseconds)
+    {
+        timeout = milliseconds;
     }
 
 

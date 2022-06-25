@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -59,6 +59,12 @@ namespace ultrabus {
          *                          when calling methods on the object.
          *                          Or an empty string if no default
          *                          interface should be set.
+         * @param msg_timeout A timeout value in milliseconds used
+         *                    when sending messages on the bus with
+         *                    this proxy class.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a
+         *                    default timeout value will be used by
+         *                    the underlaying dbus library (libdbus-1).
          * @throw std::invalid_argument If the name of the service,
          *                              object path, or interface
          *                              is not a valid name.
@@ -66,7 +72,8 @@ namespace ultrabus {
         ObjectProxy (Connection& connection,
                      const std::string& service,
                      const std::string& object_path,
-                     const std::string& default_interface="");
+                     const std::string& default_interface="",
+                     const int msg_timeout=DBUS_TIMEOUT_USE_DEFAULT);
 
         /**
          * Destructor.
@@ -168,6 +175,26 @@ namespace ultrabus {
                 return send_msg_impl (msg);
             }
 
+        /**
+         * Get the timeout used when sending messages on the DBus
+         * using this proxy instance.
+         * @return A timeout value in milliseconds.
+         *         DBUS_TIMEOUT_USE_DEFAULT(-1) means that a default
+         *         timeout value is used by the underlaying
+         *         dbus library (libdbus-1).
+         */
+        int msg_timeout ();
+
+        /**
+         * Set the timeout used when sending messages on the DBus
+         * using this proxy instance.
+         * @param millieconds A timeout value in milliseconds.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                    timeout value is used by the underlaying
+         *                    dbus library (libdbus-1).
+         */
+        void msg_timeout (int milliseconds);
+
 
     protected:
         virtual bool on_signal (Message &msg);
@@ -177,6 +204,7 @@ namespace ultrabus {
         std::string target;
         std::string opath;
         std::string def_iface;
+        int timeout;
         std::mutex cb_mutex;
         std::map<std::pair<std::string, std::string>, sig_cb> callbacks;
         Message send_msg_impl (const Message& msg);

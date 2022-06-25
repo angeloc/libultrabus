@@ -62,10 +62,17 @@ namespace ultrabus {
          * Constructs an object used for calling methods in the standard
          * DBUs interface <code>org.freedesktop.DBus</code>.
          * @param connection A DBus connection.
+         * @param msg_timeout A timeout value in milliseconds used
+         *                    when sending messages on the bus using
+         *                    this instance.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a
+         *                    default timeout value will be used by
+         *                    the underlaying dbus library (libdbus-1).
          * @see <a href=https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-messages
          *       rel="noopener noreferrer" target="_blank">D-Bus Specification - Message Bus Messages</a>
          */
-        org_freedesktop_DBus (Connection& connection);
+        org_freedesktop_DBus (Connection& connection,
+                              const int msg_timeout=DBUS_TIMEOUT_USE_DEFAULT);
 
         /**
          * Destructor.
@@ -887,12 +894,35 @@ namespace ultrabus {
          */
         void set_name_acquired_cb (name_cb_t callback);
 
+        /**
+         * Get the timeout used when sending messages on the DBus using instance.
+         * @return A timeout value in milliseconds.
+         *         DBUS_TIMEOUT_USE_DEFAULT(-1) means that a default
+         *         timeout value is used by the underlaying
+         *         dbus library (libdbus-1).
+         */
+        int msg_timeout () {
+            return timeout;
+        }
+
+        /**
+         * Set the timeout used when sending messages on the DBus using this instance.
+         * @param millieconds A timeout value in milliseconds.
+         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                    timeout value is used by the underlaying
+         *                    dbus library (libdbus-1).
+         */
+        void msg_timeout (int milliseconds) {
+            timeout = milliseconds;
+        }
+
 
     protected:
         virtual bool on_signal (Message& msg);
 
 
     private:
+        int timeout;
         std::mutex cb_mutex;
         name_owner_changed_cb_t name_owner_changed_cb;
         name_cb_t name_lost_cb;
