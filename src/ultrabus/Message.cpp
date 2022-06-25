@@ -232,8 +232,11 @@ namespace ultrabus {
     Message& Message::operator= (Message&& message)
     {
         if (&message != this) {
+            DBusMessage* old_msg_handle = msg_handle;
             msg_handle = message.msg_handle;
             message.msg_handle = nullptr;
+            if (old_msg_handle)
+                dbus_message_unref (old_msg_handle);
         }
         return *this;
     }
