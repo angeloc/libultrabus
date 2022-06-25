@@ -38,21 +38,29 @@ namespace ultrabus {
     public:
         /**
          * Default constructor.
+         * Creates a connection object that uses an internal I/O handler.
          */
         Connection ();
 
         /**
          * Constructor.
+         * @param io_handler An I/O handler object that shall be
+         *                   used by this connection.
          */
         Connection (iomultiplex::iohandler_base& io_handler);
 
         /**
          * Destructor.
+         * Close the connection and free resources.
          */
         ~Connection ();
 
         /**
          * Connect and register to a well known bus.
+         * @param type The DBus to connect to, DBUS_BUS_SESSION or DBUS_BUS_SYSTEM.
+         * @param private_connection Set to <code>true</code> for a private connection.
+         * @param exit_on_disconnect If <code>true</code>, the process will
+         *                           exit if the connection is disconnected.
          * @return 0 on success, -1 on failure.
          */
         int connect (const DBusBusType type=DBUS_BUS_SESSION,
@@ -61,6 +69,11 @@ namespace ultrabus {
 
         /**
          * Connect and register to a specific bus address.
+         * @param bus_address The address of the bus to connect to.
+         * @param timeout Timeout in milliseconds when connecting to the bus.
+         * @param private_connection Set to <code>true</code> for a private connection.
+         * @param exit_on_disconnect If <code>true</code>, the process will
+         *                           exit if the connection is disconnected.
          * @return 0 on success, -1 on failure.
          */
         int connect (const std::string& bus_address,
@@ -71,12 +84,20 @@ namespace ultrabus {
         /**
          * Return true if connected to a bus.
          */
-        bool is_connected ();
+        bool is_connected () const;
 
         /**
          * Disconnect from the bus.
          */
         void disconnect ();
+
+        /**
+         * Get the unique name of the connection.
+         * @return The unique name of the connection.
+         *         Could be an empty string if it's
+         *         not connected.
+         */
+        std::string unique_name () const;
 
         /**
          * Send a message on the bus.
@@ -105,6 +126,13 @@ namespace ultrabus {
         Message send_and_wait (const Message& msg, int timeout=DBUS_TIMEOUT_USE_DEFAULT);
 
         /**
+         * Return the iohandler_base used by the connection object.
+         */
+        iomultiplex::iohandler_base& io_handler () {
+            return *ioh;
+        }
+
+        /**
          * Return get DBus connection object.
          * Use this method if you're using the DBus api calls directly.
          */
@@ -112,34 +140,36 @@ namespace ultrabus {
             return conn;
         }
 
-        /**
-         * Return the iohandler_base used by the connection object.
-         */
-        iomultiplex::iohandler_base& io_handler () {
-            return *ioh;
-        }
-
 
     private:
+        // libdbus-1 connection object
         DBusConnection* conn;
         bool private_connection;
 
-        std::mutex pending_mutex;
-        std::map<DBusPendingCall*, std::function<void (Message&)>> pending_messages;
-
+        // I/O handler
         iomultiplex::iohandler_base* ioh;
         bool internal_io_handler;
 
-        std::mutex wt_mutex;
-        iomultiplex::TimerSet* timer_set;
-        std::map<DBusWatch*, iomultiplex::FdConnection> bus_io;
-        std::map<DBusTimeout*, long> bus_timeout;
+        // Pending messages
+        using pending_msg_cb_t = std::function<void (Message&)>;
+        std::mutex pending_msg_mutex;
+        std::map<DBusPendingCall*, pending_msg_cb_t> pending_messages;
+
+        // DBus I/O
+        std::mutex io_mutex;
+        iomultiplex::TimerSet* io_timers;
+        std::map<DBusTimeout*, long> io_timeouts;
+        std::map<DBusWatch*, iomultiplex::FdConnection> io_watches;
 
         void start_message_dispatcher ();
-        void dbus_watch_rx_ready_cb (iomultiplex::io_result_t& ior, DBusWatch* watch);
-        void dbus_watch_tx_ready_cb (iomultiplex::io_result_t& ior, DBusWatch* watch);
 
-        static void pending_msg_callback (DBusPendingCall* pending, void* user_data);
+        void on_dispatch_status (DBusDispatchStatus status);
+        void on_watch_rx_ready (iomultiplex::io_result_t& ior, DBusWatch* watch);
+        void on_watch_tx_ready (iomultiplex::io_result_t& ior, DBusWatch* watch);
+
+        // Static callbacks called from libdbus-1
+        //
+        static void dbus_pending_msg_cb (DBusPendingCall* pending, void* data);
         static void dbus_dispatch_status_cb (DBusConnection* c, DBusDispatchStatus status, void* data);
 
         static dbus_bool_t dbus_add_watch_cb (DBusWatch* watch, void* data);

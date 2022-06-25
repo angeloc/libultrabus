@@ -43,7 +43,7 @@ namespace ultrabus {
           private_connection {false},
           ioh (new iomultiplex::default_iohandler(SIGRTMIN)),
           internal_io_handler {true},
-          timer_set (new iomultiplex::TimerSet(*ioh))
+          io_timers (new iomultiplex::TimerSet(*ioh))
     {
         dbus_threads_init_default ();
     }
@@ -56,7 +56,7 @@ namespace ultrabus {
           private_connection {false},
           ioh (&io_handler),
           internal_io_handler {false},
-          timer_set (new iomultiplex::TimerSet(*ioh))
+          io_timers (new iomultiplex::TimerSet(*ioh))
     {
         dbus_threads_init_default ();
     }
@@ -67,7 +67,7 @@ namespace ultrabus {
     Connection::~Connection ()
     {
         disconnect ();
-        delete timer_set;
+        delete io_timers;
         if (internal_io_handler)
             delete ioh;
     }
@@ -163,7 +163,7 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    bool Connection::is_connected ()
+    bool Connection::is_connected () const
     {
         return conn!=nullptr && dbus_connection_get_is_connected(conn)==TRUE;
     }
@@ -180,17 +180,17 @@ namespace ultrabus {
             dbus_connection_close (conn);
         dbus_connection_unref (conn);
 
-        pending_mutex.lock ();
+        pending_msg_mutex.lock ();
         for (auto& e : pending_messages)
             dbus_pending_call_unref (e.first);
         pending_messages.clear ();
-        pending_mutex.unlock ();
+        pending_msg_mutex.unlock ();
 
         {
-            std::lock_guard<std::mutex> lock (wt_mutex);
-            bus_io.clear ();
-            timer_set->clear ();
-            bus_timeout.clear ();
+            std::lock_guard<std::mutex> lock (io_mutex);
+            io_watches.clear ();
+            io_timers->clear ();
+            io_timeouts.clear ();
         }
         if (internal_io_handler) {
             ioh->stop ();
@@ -199,6 +199,17 @@ namespace ultrabus {
 
         conn = nullptr;
         private_connection = false;
+    }
+
+
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    std::string Connection::unique_name () const
+    {
+        const char* id = nullptr;
+        if (conn)
+            id = dbus_bus_get_unique_name (conn);
+        return std::string (id ? id : "");
     }
 
 
@@ -232,7 +243,7 @@ namespace ultrabus {
         if (io_handler().same_context()) {
             bool result;
             DBusPendingCall* pending = nullptr;
-            std::lock_guard<std::mutex> lock (pending_mutex);
+            std::lock_guard<std::mutex> lock (pending_msg_mutex);
             result = dbus_connection_send_with_reply (conn,
                                                       const_cast<Message&>(msg).handle(),
                                                       &pending,
@@ -240,14 +251,14 @@ namespace ultrabus {
             if (!result || !pending)
                 return -1;
             pending_messages.emplace (pending, reply_cb);
-            dbus_pending_call_set_notify (pending, pending_msg_callback, this, nullptr);
+            dbus_pending_call_set_notify (pending, dbus_pending_msg_cb, this, nullptr);
         }else{
-            timer_set->set (0, [this, msg, reply_cb, timeout](iomultiplex::TimerSet& ts,
+            io_timers->set (0, [this, msg, reply_cb, timeout](iomultiplex::TimerSet& ts,
                                                               long timer_id)
                 {
                     bool result;
                     DBusPendingCall* pending = nullptr;
-                    std::unique_lock<std::mutex> lock (pending_mutex);
+                    std::unique_lock<std::mutex> lock (pending_msg_mutex);
                     result = dbus_connection_send_with_reply (conn,
                                                               const_cast<Message&>(msg).handle(),
                                                               &pending,
@@ -263,7 +274,7 @@ namespace ultrabus {
                         return;
                     }
                     pending_messages.emplace (pending, reply_cb);
-                    dbus_pending_call_set_notify (pending, pending_msg_callback, this, nullptr);
+                    dbus_pending_call_set_notify (pending, dbus_pending_msg_cb, this, nullptr);
                 });
         }
         return 0;
@@ -279,8 +290,10 @@ namespace ultrabus {
         volatile bool got_reply = false;
         Message reply;
 
+        // Send the message
         auto result = send (msg, [&](Message& r)
             {
+                // Save the reply and notify the waiting thread
                 std::unique_lock<std::mutex> lock (m);
                 reply = std::move (r);
                 got_reply = true;
@@ -289,44 +302,19 @@ namespace ultrabus {
             timeout);
 
         if (result) {
-            // Return an error response
+            // Failed to send the message, return an error reply
             Message reply (dbus_message_new(DBUS_MESSAGE_TYPE_ERROR));
             reply.dec_ref (); // ref count increased in Message constructor
             reply.error_name ("se.ultramarin.ultrabus.Error.ENOMEM");
             reply << std::string("Unable to allocate memory for DBus message");
             return reply;
         }
+
+        // Wait for the message reply
         std::unique_lock<std::mutex> lock (m);
         while (!got_reply)
             cv.wait (lock, [&got_reply]{return got_reply;});
         return reply;
-    }
-
-
-    //-----------------------------------------------------------------------
-    //-----------------------------------------------------------------------
-    void Connection::pending_msg_callback (DBusPendingCall* pending, void* user_data)
-    {
-        Connection* self = static_cast<Connection*> (user_data);
-        self->pending_mutex.lock ();
-
-        auto entry = self->pending_messages.find (pending);
-        if (entry == self->pending_messages.end()) {
-            self->pending_mutex.unlock ();
-            return;
-        }
-        auto callback = entry->second;
-        self->pending_messages.erase (entry);
-        self->pending_mutex.unlock ();
-
-        if (callback) {
-            Message reply (dbus_pending_call_steal_reply(pending));
-            reply.dec_ref (); // ref count increased in Message constructor
-            dbus_pending_call_unref (pending);
-            callback (reply);
-        }else{
-            dbus_pending_call_unref (pending);
-        }
     }
 
 
@@ -361,7 +349,7 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    void Connection::dbus_dispatch_status_cb (DBusConnection* c, DBusDispatchStatus status, void* data)
+    void Connection::on_dispatch_status (DBusDispatchStatus status)
     {
         switch (status) {
         case DBUS_DISPATCH_DATA_REMAINS:
@@ -379,7 +367,7 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    void Connection::dbus_watch_rx_ready_cb (iomultiplex::io_result_t& ior, DBusWatch* watch)
+    void Connection::on_watch_rx_ready (iomultiplex::io_result_t& ior, DBusWatch* watch)
     {
         DBG_LOG ("RX ready");
 
@@ -387,8 +375,8 @@ namespace ultrabus {
         while (dbus_connection_dispatch(conn) == DBUS_DISPATCH_DATA_REMAINS)
             ;
 
-        std::lock_guard<std::mutex> lock (wt_mutex);
-        if (bus_io.find(watch) == bus_io.end())
+        std::lock_guard<std::mutex> lock (io_mutex);
+        if (io_watches.find(watch) == io_watches.end())
             return; // Watch removed in the dispatch function
 
         auto flags = dbus_watch_get_flags (watch);
@@ -397,7 +385,7 @@ namespace ultrabus {
             ior.conn.wait_for_rx ([this, watch](iomultiplex::io_result_t& ior)->bool
                 {
                     if (!ior.errnum)
-                        dbus_watch_rx_ready_cb (ior, watch);
+                        on_watch_rx_ready (ior, watch);
                     return false;
                 });
         }
@@ -406,26 +394,65 @@ namespace ultrabus {
 
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
-    void Connection::dbus_watch_tx_ready_cb (iomultiplex::io_result_t& ior, DBusWatch* watch)
+    void Connection::on_watch_tx_ready (iomultiplex::io_result_t& ior, DBusWatch* watch)
     {
         DBG_LOG ("TX ready");
 
         dbus_watch_handle (watch, DBUS_WATCH_WRITABLE);
 
-        std::lock_guard<std::mutex> lock (wt_mutex);
-        if (bus_io.find(watch) == bus_io.end())
+        std::lock_guard<std::mutex> lock (io_mutex);
+        if (io_watches.find(watch) == io_watches.end())
             return; // Watch removed in the watch_handle function
 
         auto flags = dbus_watch_get_flags (watch);
         bool enabled = dbus_watch_get_enabled (watch);
-        if (enabled && (flags&DBUS_WATCH_WRITABLE)) {
+        if (enabled && (flags & DBUS_WATCH_WRITABLE)) {
             ior.conn.wait_for_tx ([this, watch](iomultiplex::io_result_t& ior)->bool
                 {
                     if (!ior.errnum)
-                        dbus_watch_tx_ready_cb (ior, watch);
+                        on_watch_tx_ready (ior, watch);
                     return false;
                 });
         }
+    }
+
+
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    void Connection::dbus_pending_msg_cb (DBusPendingCall* pending, void* data)
+    {
+        Connection* self = static_cast<Connection*> (data);
+        pending_msg_cb_t callback = nullptr;
+
+        {
+            std::lock_guard<std::mutex> lock (self->pending_msg_mutex);
+            auto entry = self->pending_messages.find (pending);
+            if (entry == self->pending_messages.end())
+                return;
+
+            callback = entry->second;
+            self->pending_messages.erase (entry);
+        }
+
+        if (callback) {
+            Message reply (dbus_pending_call_steal_reply(pending));
+            reply.dec_ref (); // ref count increased in Message constructor
+            dbus_pending_call_unref (pending);
+            callback (reply);
+        }else{
+            dbus_pending_call_unref (pending);
+        }
+    }
+
+
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    void Connection::dbus_dispatch_status_cb (DBusConnection* c,
+                                              DBusDispatchStatus status,
+                                              void* data)
+    {
+        Connection* self = static_cast<Connection*> (data);
+        self->on_dispatch_status (status);
     }
 
 
@@ -440,11 +467,11 @@ namespace ultrabus {
             return true;
 
         Connection* self = static_cast<Connection*> (data);
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
+        std::lock_guard<std::mutex> lock (self->io_mutex);
 
-        auto entry = self->bus_io.find (watch);
-        if (entry == self->bus_io.end())
-            entry = self->bus_io.emplace(watch, iomultiplex::FdConnection(*self->ioh, fd, true)).first;
+        auto entry = self->io_watches.find (watch);
+        if (entry == self->io_watches.end())
+            entry = self->io_watches.emplace(watch, iomultiplex::FdConnection(*self->ioh, fd, true)).first;
         iomultiplex::FdConnection& fdc = entry->second;
 
         if (dbus_watch_get_enabled(watch)) {
@@ -453,7 +480,7 @@ namespace ultrabus {
                 fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool
                     {
                         if (!ior.errnum)
-                            self->dbus_watch_rx_ready_cb (ior, watch);
+                            self->on_watch_rx_ready (ior, watch);
                         return false;
                     });
             }
@@ -461,7 +488,7 @@ namespace ultrabus {
                 fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool
                     {
                         if (!ior.errnum)
-                            self->dbus_watch_tx_ready_cb (ior, watch);
+                            self->on_watch_tx_ready (ior, watch);
                         return false;
                     });
             }
@@ -479,10 +506,10 @@ namespace ultrabus {
 
         Connection* self = static_cast<Connection*> (data);
 
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
-        auto entry = self->bus_io.find (watch);
-        if (entry != self->bus_io.end())
-            self->bus_io.erase (entry);
+        std::lock_guard<std::mutex> lock (self->io_mutex);
+        auto entry = self->io_watches.find (watch);
+        if (entry != self->io_watches.end())
+            self->io_watches.erase (entry);
     }
 
 
@@ -492,9 +519,9 @@ namespace ultrabus {
     {
         Connection* self = static_cast<Connection*> (data);
 
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
-        auto entry = self->bus_io.find (watch);
-        if (entry == self->bus_io.end())
+        std::lock_guard<std::mutex> lock (self->io_mutex);
+        auto entry = self->io_watches.find (watch);
+        if (entry == self->io_watches.end())
             return;
         iomultiplex::FdConnection& fdc = entry->second;
 
@@ -507,7 +534,7 @@ namespace ultrabus {
                 fdc.wait_for_rx ([self, watch](iomultiplex::io_result_t& ior)->bool
                     {
                         if (!ior.errnum)
-                            self->dbus_watch_rx_ready_cb (ior, watch);
+                            self->on_watch_rx_ready (ior, watch);
                         return false;
                     });
             }
@@ -516,7 +543,7 @@ namespace ultrabus {
                 fdc.wait_for_tx ([self, watch](iomultiplex::io_result_t& ior)->bool
                     {
                         if (!ior.errnum)
-                            self->dbus_watch_tx_ready_cb (ior, watch);
+                            self->on_watch_tx_ready (ior, watch);
                         return false;
                     });
             }
@@ -540,23 +567,23 @@ namespace ultrabus {
     {
         DBG_LOG ("Add timer");
         Connection* self = static_cast<Connection*> (data);
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
+        std::lock_guard<std::mutex> lock (self->io_mutex);
 
-        auto entry = self->bus_timeout.find (timeout);
-        if (entry == self->bus_timeout.end()) {
-            entry = self->bus_timeout.emplace(timeout, -1).first;
+        auto entry = self->io_timeouts.find (timeout);
+        if (entry == self->io_timeouts.end()) {
+            entry = self->io_timeouts.emplace(timeout, -1).first;
         }
         long& timer_id = entry->second;
 
         if (dbus_timeout_get_enabled(timeout)) {
             if (timer_id >= 0) {
-                self->timer_set->cancel (timer_id);
+                self->io_timers->cancel (timer_id);
                 timer_id = -1;
             }
             auto interval = dbus_timeout_get_interval (timeout);
             if (interval >= 0) {
                 DBG_LOG ("Set timer: %d", interval);
-                timer_id = self->timer_set->set (interval, interval,
+                timer_id = self->io_timers->set (interval, interval,
                                                  [self, timeout](iomultiplex::TimerSet& ts, long timer_id)
                     {
                         // Timer expiration callback
@@ -568,7 +595,7 @@ namespace ultrabus {
             }
         }else{
             if (timer_id >= 0) {
-                self->timer_set->cancel (timer_id);
+                self->io_timers->cancel (timer_id);
                 timer_id = -1;
             }
             DBG_LOG ("Cancel timer");
@@ -585,13 +612,13 @@ namespace ultrabus {
         DBG_LOG ("Remove timer");
         Connection* self = static_cast<Connection*> (data);
 
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
-        auto entry = self->bus_timeout.find (timeout);
-        if (entry != self->bus_timeout.end()) {
+        std::lock_guard<std::mutex> lock (self->io_mutex);
+        auto entry = self->io_timeouts.find (timeout);
+        if (entry != self->io_timeouts.end()) {
             long& timer_id = entry->second;
             if (timer_id >= 0)
-                self->timer_set->cancel (timer_id);
-            self->bus_timeout.erase (entry);
+                self->io_timers->cancel (timer_id);
+            self->io_timeouts.erase (entry);
         }
     }
 
@@ -603,15 +630,15 @@ namespace ultrabus {
         DBG_LOG ("Toggle timer");
         Connection* self = static_cast<Connection*> (data);
 
-        std::lock_guard<std::mutex> lock (self->wt_mutex);
-        auto entry = self->bus_timeout.find (timeout);
-        if (entry == self->bus_timeout.end())
+        std::lock_guard<std::mutex> lock (self->io_mutex);
+        auto entry = self->io_timeouts.find (timeout);
+        if (entry == self->io_timeouts.end())
             return;
         long& timer_id = entry->second;
 
         // Cancel the timer if it is active
         if (timer_id >= 0) {
-            self->timer_set->cancel (timer_id);
+            self->io_timers->cancel (timer_id);
             timer_id = -1;
         }
 
@@ -619,7 +646,7 @@ namespace ultrabus {
             auto interval = dbus_timeout_get_interval (timeout);
             DBG_LOG ("Enable timer, interval: %d", (int)interval);
             if (interval >= 0) {
-                timer_id = self->timer_set->set (interval, interval,
+                timer_id = self->io_timers->set (interval, interval,
                                                  [self, timeout](iomultiplex::TimerSet& ts, long timer_id)
                     {
                         // Timer expiration callback
