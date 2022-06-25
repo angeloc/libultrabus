@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -900,7 +900,7 @@ namespace ultrabus {
 
         std::string unique_bus_name;
         void get_bus_name ();
-        void on_signal_impl (Message& msg);
+        void on_signal_impl (Message& msg, std::unique_lock<std::mutex>& cb_lock);
     };
 
 

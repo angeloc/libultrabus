@@ -283,22 +283,22 @@ namespace ultrabus {
             return false;
 
         if (msg.name() == "InterfacesAdded") {
-            std::lock_guard<std::mutex> lock (iface_mutex);
+            std::unique_lock<std::mutex> iface_lock (iface_mutex);
             auto key = std::make_pair (msg.sender(), msg.path());
             auto entry = iface_added_callbacks.find (key);
             if (entry != iface_added_callbacks.end()) {
                 auto cb = entry->second;
-                iface_mutex.unlock ();
+                iface_lock.unlock ();
                 handle_added_ifaces (msg, cb);
             }
         }
         else if (msg.name() == "InterfacesRemoved") {
-            std::lock_guard<std::mutex> lock (iface_mutex);
+            std::unique_lock<std::mutex> iface_lock (iface_mutex);
             auto key = std::make_pair (msg.sender(), msg.path());
             auto entry = iface_removed_callbacks.find (key);
             if (entry != iface_removed_callbacks.end()) {
                 auto cb = entry->second;
-                iface_mutex.unlock ();
+                iface_lock.unlock ();
                 handle_removed_ifaces (msg, cb);
             }
         }

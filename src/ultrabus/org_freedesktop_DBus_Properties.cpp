@@ -320,7 +320,7 @@ namespace ultrabus {
             return false;
         }
 
-        std::lock_guard<std::mutex> lock (props_changed_mutex);
+        std::unique_lock<std::mutex> lock (props_changed_mutex);
         auto key = std::make_pair (msg.sender(), msg.path());
         auto entry = props_changed_callbacks.find (key);
         if (entry != props_changed_callbacks.end() && entry->second) {
@@ -344,7 +344,7 @@ namespace ultrabus {
                 for (auto& entry : dbus_invalidated_props)
                     invalidated_props.emplace (entry.str());
 
-                props_changed_mutex.unlock ();
+                lock.unlock ();
                 cb (iface_name.str(), changed_props, invalidated_props);
             }
             catch (std::bad_cast& bc) {

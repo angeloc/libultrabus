@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -173,7 +173,7 @@ namespace ultrabus {
         if (msg.path() != opath)
             return false;
 
-        std::lock_guard<std::mutex> lock (cb_mutex);
+        std::unique_lock<std::mutex> cb_lock (cb_mutex);
         auto key = std::make_pair (msg.interface(), msg.name());
         auto entry = callbacks.find (key);
         if (entry == callbacks.end()) {
@@ -186,7 +186,7 @@ namespace ultrabus {
             return false;
 
         auto cb = entry->second;
-        cb_mutex.unlock ();
+        cb_lock.unlock ();
         cb (msg);
         return true;
     }

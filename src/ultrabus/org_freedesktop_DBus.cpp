@@ -811,7 +811,7 @@ namespace ultrabus {
             return false;
         }
 
-        std::lock_guard<std::mutex> lock (cb_mutex);
+        std::unique_lock<std::mutex> cb_lock (cb_mutex);
 
         if (!name_owner_changed_cb && !name_lost_cb && !name_acquired_cb)
             return false;
@@ -820,12 +820,13 @@ namespace ultrabus {
             // Fetch the unique bus name of 'org.freedesktop.DBus' before calling on_signal_impl
             get_name_owner (DBUS_SERVICE_DBUS, [this, msg](retvalue<std::string>& retval)
                 {
-                    std::lock_guard<std::mutex> lock (cb_mutex);
+                    // Callback called from worker thread
+                    std::unique_lock<std::mutex> cb_lock (cb_mutex);
                     unique_bus_name = retval.get ();
-                    on_signal_impl (const_cast<Message&>(msg));
+                    on_signal_impl (const_cast<Message&>(msg), cb_lock);
                 });
         }else{
-            on_signal_impl (msg);
+            on_signal_impl (msg, cb_lock);
         }
 
         return false;
@@ -835,7 +836,8 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     // cb_mutex is locked
     //--------------------------------------------------------------------------
-    void org_freedesktop_DBus::on_signal_impl (Message& msg)
+    void org_freedesktop_DBus::on_signal_impl (Message& msg,
+                                               std::unique_lock<std::mutex>& cb_lock)
     {
         if (msg.sender() != unique_bus_name)
             return;
@@ -846,7 +848,7 @@ namespace ultrabus {
             dbus_basic new_owner;
             if (msg.get_args(&name, &old_owner, &new_owner, nullptr)) {
                 auto cb = name_owner_changed_cb;
-                cb_mutex.unlock ();
+                cb_lock.unlock ();
                 cb (name.str(), old_owner.str(), new_owner.str());
             }
         }
@@ -854,7 +856,7 @@ namespace ultrabus {
             dbus_basic name;
             if (msg.get_args(&name, nullptr)) {
                 auto cb = name_lost_cb;
-                cb_mutex.unlock ();
+                cb_lock.unlock ();
                 cb (name.str());
             }
         }
@@ -862,7 +864,7 @@ namespace ultrabus {
             dbus_basic name;
             if (msg.get_args(&name, nullptr)) {
                 auto cb = name_acquired_cb;
-                cb_mutex.unlock ();
+                cb_lock.unlock ();
                 cb (name.str());
             }
         }
