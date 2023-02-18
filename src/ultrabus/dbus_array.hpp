@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -73,52 +73,53 @@ namespace ultrabus {
 
         /**
          * Copy constructor. Make a deep copy of another dbus_array object.
-         * @param a The dbus_array object to copy.
+         * @param array The dbus_array object to copy.
          */
-        dbus_array (const dbus_array& a);
+        dbus_array (const dbus_array& array);
 
         /**
          * Move constructor.
-         * @param a The dbus_array object to move.
+         * @param array The dbus_array object to move.
          */
-        dbus_array (dbus_array&& a);
+        dbus_array (dbus_array&& array);
 
         /**
          * Copy construcor. Make a deep copy of another dbus_array object.
-         * @param obj The dbus_type object to copy.
-         *            If <code>obj</code> is not a reference to a dbus_array
-         *            object an empty dbus_array will be created
-         *            and an error message will be logged.
+         * @param array The dbus_type object to copy.
+         *              If <code>array</code> is not a reference to a dbus_array
+         *              object an empty dbus_array will be created
+         *              and an error message will be logged.
          */
-        dbus_array (const dbus_type& a);
+        dbus_array (const dbus_type& array);
 
         /**
          * Move construcor.
-         * @param obj The dbus_type object to move to this instance.
-         *            If <code>obj</code> is not a reference to a
-         *            dbus_array object an empty dbus_array will be
-         *            created, <code>obj</code> will not be modified
-         *            and an error message will be logged.
+         * @param array The dbus_type object to move to this instance.
+         *              If <code>array</code> is not a reference to a
+         *              dbus_array object an empty dbus_array will be
+         *              created, <code>array</code> will not be modified
+         *              and an error message will be logged.
          */
-        dbus_array (dbus_type&& a);
+        dbus_array (dbus_type&& array);
 
         /**
          * Creates an empty array with a specific type on elements.
-         * @param The DBus signature of the elements in the array.
+         * @param element_signature The DBus signature of the
+         *                          elements in the array.
          */
         explicit dbus_array (const std::string& element_signature);
 
         /**
          * Asignment operator. Make a deep copy of another dbus_array object.
-         * @param obj The dbus_array object to copty.
+         * @param array The dbus_array object to copty.
          */
-        dbus_array& operator= (const dbus_array& obj);
+        dbus_array& operator= (const dbus_array& array);
 
         /**
          * Move operator.
          * @param array The dbus_array object to move to this instance.
          */
-        dbus_array& operator= (dbus_array&& obj);
+        dbus_array& operator= (dbus_array&& array);
 
         /**
          * Check is this is a dbus_array object.
@@ -212,13 +213,13 @@ namespace ultrabus {
         int remove (size_t n);
 
         /**
-         * Clear the array from items.
+         * Clear the array, removing all items.
          */
         void clear ();
 
         /**
-         * Clear the array from items and set the specific type of elements it can contain.
-         * @param The DBus signature of the elements in the array.
+         * Clear the array and set the specific type of elements it can contain.
+         * @param element_signature The DBus signature of the elements in the array.
          */
         void clear (const std::string& element_signature);
 
@@ -248,19 +249,19 @@ namespace ultrabus {
     protected:
         /**
          * Make a deep copy another dbus_array object.
-         * @param a The dbus_array object to copy.
+         * @param array The dbus_array object to copy.
          */
-        virtual void copy (const dbus_type& rhs);
+        virtual void copy (const dbus_type& array);
 
         /**
          * Move another dbus_array object to this instance.
          * @param array The dbus_type object to move.
-         *              If <code>obj</code> is not a reference to a
+         *              If <code>array</code> is not a reference to a
          *              dbus_array object an empty dbus_array will be
-         *              created, <code>obj</code> will not be modified
+         *              created, <code>array</code> will not be modified
          *              and an error message will be logged.
          */
-        virtual void move (dbus_type&& rhs);
+        virtual void move (dbus_type&& array);
 
     private:
         std::vector<dbus_type_ptr> elements;

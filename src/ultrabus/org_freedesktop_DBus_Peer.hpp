@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -142,10 +142,10 @@ namespace ultrabus {
 
         /**
          * Set the timeout used when sending messages on the DBus using this instance.
-         * @param millieconds A timeout value in milliseconds.
-         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
-         *                    timeout value is used by the underlaying
-         *                    dbus library (libdbus-1).
+         * @param milliseconds A timeout value in milliseconds.
+         *                     DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                     timeout value is used by the underlaying
+         *                     dbus library (libdbus-1).
          */
         void msg_timeout (int milliseconds) {
             timeout = milliseconds;

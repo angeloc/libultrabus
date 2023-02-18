@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -181,9 +181,9 @@ namespace ultrabus {
          * @param service The bus name of the service managing the objects.
          * @param object_path The path of the parent object we want
          *                    to receive infomtation about.
-         * @param callback A callback function. If this is a
-         *                 <code>nullptr</code>, the callback
-         *                 will be removed if previously set.
+         * @param cb A callback function. If this is a
+         *           <code>nullptr</code>, the callback
+         *           will be removed if previously set.
          * @return 0 if the callback was successfully set.
          *         -1 on error or if the service or object path is invalid.
          *
@@ -235,10 +235,10 @@ namespace ultrabus {
 
         /**
          * Set the timeout used when sending messages on the DBus using this instance.
-         * @param millieconds A timeout value in milliseconds.
-         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
-         *                    timeout value is used by the underlaying
-         *                    dbus library (libdbus-1).
+         * @param milliseconds A timeout value in milliseconds.
+         *                     DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                     timeout value is used by the underlaying
+         *                     dbus library (libdbus-1).
          */
         void msg_timeout (int milliseconds) {
             timeout = milliseconds;

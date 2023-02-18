@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -110,11 +110,11 @@ namespace ultrabus {
          * @param service A bus name.
          * @param object_path The object owning the properties.
          * @param interface The interface the porperties belong to.
-         * @param callback This callback is called when a result
-         *                 is received on the message bus.
-         *                 <br/>The parameter to the callback is the
-         *                 same as the return value from the
-         *                 corresponding synchronous method.
+         * @param cb This callback is called when a result
+         *           is received on the message bus.
+         *           <br/>The parameter to the callback is the
+         *           same as the return value from the
+         *           corresponding synchronous method.
          * @return 0 if the message was queued on the message bus,
          *         -1 if failing to queue the message.
          *
@@ -169,11 +169,11 @@ namespace ultrabus {
          * @param object_path The object owning the property.
          * @param interface The interface the porperty belong to.
          * @param property_name The name of the property.
-         * @param callback This callback is called when a result
-         *                 is received on the message bus.
-         *                 <br/>The parameter to the callback is the
-         *                 same as the return value from the
-         *                 corresponding synchronous method.
+         * @param cb This callback is called when a result
+         *           is received on the message bus.
+         *           <br/>The parameter to the callback is the
+         *           same as the return value from the
+         *           corresponding synchronous method.
          * @return 0 if the message was queued on the message bus,
          *         -1 if failing to queue the message.
          *
@@ -229,18 +229,18 @@ namespace ultrabus {
          * This method queues a message on the message bus and returns immediately,
          * the result is handled in a callback function.
          * <br/>This method can safely be called from
-         * within callback functions in libultrabus.
+         * within other callback functions in libultrabus.
          *
          * @param service A bus name.
          * @param object_path The object owning the property.
          * @param interface The interface the porperty belong to.
          * @param property_name The name of the property.
          * @param value The value of the property.
-         * @param callback This callback is called when a result
-         *                 is received on the message bus.
-         *                 <br/>The parameter to the callback is the
-         *                 same as the return value from the
-         *                 corresponding synchronous method.
+         * @param cb This callback is called when a result
+         *           is received on the message bus.
+         *           <br/>The parameter to the callback is the
+         *           same as the return value from the
+         *           corresponding synchronous method.
          * @return 0 if the message was queued on the message bus,
          *         -1 if failing to queue the message.
          *
@@ -297,10 +297,10 @@ namespace ultrabus {
 
         /**
          * Set the timeout used when sending messages on the DBus using this instance.
-         * @param millieconds A timeout value in milliseconds.
-         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
-         *                    timeout value is used by the underlaying
-         *                    dbus library (libdbus-1).
+         * @param milliseconds A timeout value in milliseconds.
+         *                     DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                     timeout value is used by the underlaying
+         *                     dbus library (libdbus-1).
          */
         void msg_timeout (int milliseconds) {
             timeout = milliseconds;

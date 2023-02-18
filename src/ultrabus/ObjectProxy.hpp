@@ -53,7 +53,7 @@ namespace ultrabus {
         /**
          * Constructor.
          * @param connection A DBus connection object.
-         * @param servie The service that owns the object.
+         * @param service The service that owns the object.
          * @param object_path The object we want to communicate with.
          * @param default_interface The default DBus interface to use
          *                          when calling methods on the object.
@@ -194,10 +194,10 @@ namespace ultrabus {
         /**
          * Set the timeout used when sending messages on the DBus
          * using this proxy instance.
-         * @param millieconds A timeout value in milliseconds.
-         *                    DBUS_TIMEOUT_USE_DEFAULT means that a default
-         *                    timeout value is used by the underlaying
-         *                    dbus library (libdbus-1).
+         * @param milliseconds A timeout value in milliseconds.
+         *                     DBUS_TIMEOUT_USE_DEFAULT means that a default
+         *                     timeout value is used by the underlaying
+         *                     dbus library (libdbus-1).
          */
         void msg_timeout (int milliseconds);
 

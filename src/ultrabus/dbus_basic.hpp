@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -45,7 +45,7 @@ namespace ultrabus {
          * Constructor.
          * Construct a DBus basic type with a specific signature and value.
          * @param signature The DBus type signature.
-         * @param valud The value of the DBus type.
+         * @param value The value of the DBus type.
          */
         dbus_basic (const std::string& signature, const DBusBasicValue& value);
 

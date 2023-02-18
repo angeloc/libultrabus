@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017,2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2015-2017,2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -80,7 +80,7 @@ namespace ultrabus {
          * Create a message reply message.
          * @param message The DBus message object being replied to.
          * @param is_error True if this is an error response.
-         * @param name The name of the error is this is an error message.
+         * @param error_name The name of the error if this is an error reply.
          * @param error_message The error description.
          */
         Message (DBusMessage* message,
@@ -92,7 +92,7 @@ namespace ultrabus {
          * Create a message reply message.
          * @param message The DBus message object being replied to.
          * @param is_error True if this is an error response.
-         * @param name The name of the error is this is an error message.
+         * @param error_name The name of the error if this is an error reply.
          * @param error_message The error description.
          */
         Message (Message& message,
@@ -231,7 +231,7 @@ namespace ultrabus {
 
         /**
          * Set the destination of the message.
-         * @param destination The destination of the message.
+         * @param bus_name The destination of the message.
          */
         void destination (const std::string& bus_name);
 
@@ -281,7 +281,8 @@ namespace ultrabus {
         /**
          * Set the error name if this message is an error message.
          * This method is irrelevant if the message isn't an error message.
-         * @param 0 on success. -1 if the error name is invalid.
+         * @param name An error name.
+         * @return 0 on success. -1 if the error name is invalid.
          */
         int error_name (const std::string& name);
 
