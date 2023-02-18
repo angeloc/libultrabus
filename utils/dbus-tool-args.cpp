@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -30,6 +30,8 @@
 
 using namespace std;
 
+static constexpr const char* prog_name = "dbus-tool";
+
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -42,6 +44,7 @@ void appargs_t::print_usage_and_exit (ostream& out, int exit_code)
     out << "  -y, --system                  Connect to the system bus instead of the session bus." << endl;
     out << "  -b, --bus=ADDRESS             Connect to a specific bus address. Ignoring parameter --system." << endl;
     out << "  -t, --timeout=MILLISECONDS    Set a specific timeout when waiting for message replies." << endl;
+    out << "  -v, --version                 Print version and exit." << endl;
     out << "  -h, --help                    Print this help message and exit." << endl;
     out << endl;
     out << "Commands:" << endl;
@@ -122,10 +125,11 @@ appargs_t::appargs_t (int argc, char* argv[])
         { "signature",   no_argument,       0, 's'},
         { "quiet",       no_argument,       0, 'q'},
         { "raw",         no_argument,       0, 'r'},
+        { "version",     no_argument,       0, 'v'},
         { "help",        no_argument,       0, 'h'},
         { 0, 0, 0, 0}
     };
-    static const char* arg_format = "yb:t:axsqrh";
+    static const char* arg_format = "yb:t:axsqrvh";
     bool be_quiet = false;
 
     while (true) {
@@ -160,6 +164,10 @@ appargs_t::appargs_t (int argc, char* argv[])
             break;
         case 'r':
             raw = true;
+            break;
+        case 'v': // --version
+            std::cout << prog_name << ' ' << PACKAGE_VERSION << std::endl;
+            exit (0);
             break;
         case 'h': // --help
             print_usage_and_exit (cout, 0);
