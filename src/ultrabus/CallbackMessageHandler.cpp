@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -36,12 +36,11 @@ namespace ultrabus {
     //--------------------------------------------------------------------------
     CallbackMessageHandler::CallbackMessageHandler (Connection& connection,
                                                     msg_cb_t method_call_cb,
-                                                    msg_cb_t signal_cb,
-                                                    msg_cb_t message_cb)
+                                                    msg_cb_t signal_cb)
         : MessageHandler (connection),
           on_method_call_cb (method_call_cb),
           on_signal_cb (signal_cb),
-          on_message_cb (message_cb)
+          on_message_cb (nullptr)
     {
     }
 

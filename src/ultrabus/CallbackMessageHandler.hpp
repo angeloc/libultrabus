@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -43,11 +43,12 @@ namespace ultrabus {
         /**
          * Constructor.
          * @param connection A DBus connection object.
+         * @param method_call_cb Callback to be called on incoming DBus method calls.
+         * @param signal_cb Callback to be called on incoming DBus signals.
          */
         CallbackMessageHandler (Connection& connection,
                                 msg_cb_t method_call_cb = nullptr,
-                                msg_cb_t signal_cb = nullptr,
-                                msg_cb_t message_cb = nullptr);
+                                msg_cb_t signal_cb = nullptr);
 
         /**
          * Destructor.
