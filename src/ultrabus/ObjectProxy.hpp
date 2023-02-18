@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -98,15 +98,21 @@ namespace ultrabus {
          * @param interface The interface implementing the specific signal.
          *                  If an empty string, any interface emitting the
          *                  specific signal triggers the callback.
-         * @param signal The name of the signal, it can't be an empty string.
-         * @param callback The callback to be called when signals arrive.
+         * @param signal The name of the signal. If an empty string,
+         *               any signal from this DBus object with the
+         *               (possibly) specified interface triggers the callback.
+         * @param callback The callback to be called when signals arrive.<br/>
+         *                 If this parameter is <code>nullptr</code>,
+         *                 it will have the same effect as calling method
+         *                 <code>remove_signal_callback()</code>.
+         * @return 0 on success. -1 if the interface or signal name is an invalid name.
          */
         int add_signal_callback (const std::string& interface,
                                  const std::string& signal,
                                  sig_cb callback);
 
         /**
-         * Remove a signal callback.
+         * Remove a previously added signal callback.
          */
         void remove_signal_callback (const std::string& interface,
                                      const std::string& signal);
@@ -208,6 +214,9 @@ namespace ultrabus {
         std::mutex cb_mutex;
         std::map<std::pair<std::string, std::string>, sig_cb> callbacks;
         Message send_msg_impl (const Message& msg);
+        bool on_signal_impl (const std::string& interface,
+                             const std::string& signal_name,
+                             Message &msg);
     };
 
 

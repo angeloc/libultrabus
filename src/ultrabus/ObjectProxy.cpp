@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <sstream>
 
+
 namespace ultrabus {
 
 
@@ -38,6 +39,7 @@ namespace ultrabus {
     {
         DBusError err;
         dbus_error_init (&err);
+
         dbus_validate_bus_name (service.c_str(), &err);
         if (!dbus_error_is_set(&err))
             dbus_validate_path (object_path.c_str(), &err);
@@ -81,7 +83,7 @@ namespace ultrabus {
     {
         if (!iface.empty() && !dbus_validate_interface(iface.c_str(), nullptr))
             return -1;
-        if (signal.empty() || !dbus_validate_member(signal.c_str(), nullptr))
+        if (!signal.empty() && !dbus_validate_member(signal.c_str(), nullptr))
             return -1;
         if (!callback) {
             remove_signal_callback (iface, signal);
@@ -90,10 +92,11 @@ namespace ultrabus {
 
         std::stringstream rule;
         rule << "type='signal',sender='" << target
-             << "',path='" << opath;
+             << "',path='" << opath << "'";
         if (!iface.empty())
-            rule << "',interface='" << iface;
-        rule << "',member='" << signal << "'";
+            rule << ",interface='" << iface << "'";
+        if (!signal.empty())
+            rule << ",member='" << signal << "'";
 
         std::lock_guard<std::mutex> lock (cb_mutex);
         callbacks.emplace (std::make_pair(iface, signal), callback);
@@ -107,11 +110,6 @@ namespace ultrabus {
     void ObjectProxy::remove_signal_callback (const std::string& iface,
                                               const std::string& signal)
     {
-        if (!iface.empty() && !dbus_validate_interface(iface.c_str(), nullptr))
-            return;
-        if (signal.empty() || !dbus_validate_member(signal.c_str(), nullptr))
-            return;
-
         std::lock_guard<std::mutex> lock (cb_mutex);
         auto key = std::make_pair (iface, signal);
         auto entry = callbacks.find (key);
@@ -122,10 +120,11 @@ namespace ultrabus {
 
         std::stringstream rule;
         rule << "type='signal',sender='" << target
-             << "',path='" << opath;
+             << "',path='" << opath << "'";
         if (!iface.empty())
-            rule << "',interface='" << iface;
-        rule << "',member='" << signal << "'";
+            rule << ",interface='" << iface << "'";
+        if (!signal.empty())
+            rule << ",member='" << signal << "'";
 
         remove_match_rule (rule.str());
     }
@@ -142,10 +141,11 @@ namespace ultrabus {
 
             std::stringstream rule;
             rule << "type='signal',sender='" << target
-                 << "',path='" << opath;
+                 << "',path='" << opath << "'";
             if (!iface.empty())
-                rule << "',interface='" << iface;
-            rule << "',member='" << signal << "'";
+                rule << ",interface='" << iface << "'";
+            if (!signal.empty())
+                rule << ",member='" << signal << "'";
 
             remove_match_rule (rule.str());
         }
@@ -178,22 +178,48 @@ namespace ultrabus {
         if (msg.path() != opath)
             return false;
 
-        std::unique_lock<std::mutex> cb_lock (cb_mutex);
-        auto key = std::make_pair (msg.interface(), msg.name());
-        auto entry = callbacks.find (key);
-        if (entry == callbacks.end()) {
-            auto next_key = std::make_pair ("", msg.name());
-            auto entry = callbacks.find (next_key);
-            if (entry == callbacks.end())
-                return false;
-        }
-        if (!entry->second)
-            return false;
+        bool retval = false;
+        auto interface = msg.interface ();
+        auto signal_name = msg.name ();
 
-        auto cb = entry->second;
-        cb_lock.unlock ();
-        cb (msg);
-        return true;
+        // Find callback mapped to a specific interface and a specific signal name
+        if (on_signal_impl(interface, signal_name, msg))
+            retval = true;
+
+        // Find callback mapped to any interface and a specific signal name
+        if (on_signal_impl("", signal_name, msg))
+            retval = true;
+
+        // Find callback mapped to a specific interface and any signal name
+        if (on_signal_impl(interface, "", msg))
+            retval = true;
+
+        // Find callback mapped to any interface and any signal name
+        if (on_signal_impl("", "", msg))
+            retval = true;
+
+        return retval;
+    }
+
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    bool ObjectProxy::on_signal_impl (const std::string& interface,
+                                      const std::string& signal_name,
+                                      Message &msg)
+    {
+        bool retval = false;
+
+        std::unique_lock<std::mutex> cb_lock (cb_mutex);
+        auto key = std::make_pair (interface, signal_name);
+        auto entry = callbacks.find (key);
+        if (entry != callbacks.end()) {
+            auto cb = entry->second;
+            cb_lock.unlock ();
+            cb (msg);
+            retval = true;
+        }
+        return retval;
     }
 
 
