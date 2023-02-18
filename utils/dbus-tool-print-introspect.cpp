@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -45,11 +45,18 @@ void print_introspect (const std::string& opath, const std::string& str)
 #include <libxml/tree.h>
 
 
-
+struct arg_t {
+    string name;
+    string sig;
+    arg_t () = default;
+    arg_t (const string& name_arg, const string& sig_arg)
+        : name(name_arg), sig(sig_arg)
+        {}
+};
 struct method_t {
     string name;
-    string out;
-    list<pair<string, string>> in;
+    list<arg_t> in;
+    arg_t out;
 };
 struct property_t {
     string name;
@@ -67,6 +74,7 @@ struct object_t {
     list<iface_t> ifaces;
     list<string> nodes;
 };
+
 
 static void get_type_name (xmlNode* node, string& type, string& name);
 static void parse_method (xmlNode* root, method_t& method);
@@ -110,28 +118,30 @@ void print_introspect (const std::string& opath, const std::string& str)
         if (!methods.empty()) {
             cout << "        Methods:" << endl;
             for (auto& m : methods) {
+
                 cout << "            " << m.name << endl;
-                if (m.in.empty() && m.out.empty())
-                    continue;
 
                 if (!m.in.empty()) {
                     cout << "                ";
                     cout << "IN: ";
-                    bool first = true;
+                    bool first_item = true;
                     for (auto& arg : m.in) {
-                        if (!first)
+                        if (!first_item)
                             cout << ", ";
                         else
-                            first = false;
-                        if (!arg.first.empty())
-                            cout << arg.first << "(" << arg.second << ")";
+                            first_item = false;
+                        if (arg.name.empty())
+                            cout << arg.sig;
                         else
-                            cout << arg.second;
+                            cout << arg.name << "(" << arg.sig << ")";
                     }
                     cout << endl;
                 }
-                if (!m.out.empty()) {
-                    cout << "                " << "OUT: " << m.out;
+                if (!m.out.sig.empty()) {
+                    if (m.out.name.empty())
+                        cout << "                " << "OUT: " << m.out.sig;
+                    else
+                        cout << "                " << "OUT: " << m.out.name << "(" << m.out.sig << ")";
                     cout << endl;
                 }
             }
@@ -146,16 +156,18 @@ void print_introspect (const std::string& opath, const std::string& str)
                     continue;
                 cout << "                ";
                 cout << " ARG: ";
-                bool first = true;
+                bool first_item = true;
                 for (auto& arg : s.in) {
-                    if (!first)
+                    if (arg.name.empty() && arg.sig.empty())
+                        continue;
+                    if (!first_item)
                         cout << ", ";
                     else
-                        first = false;
-                    if (!arg.first.empty())
-                        cout << arg.first << "(" << arg.second << ")";
+                        first_item = false;
+                    if (arg.name.empty())
+                        cout << arg.sig;
                     else
-                        cout << arg.second;
+                        cout << arg.name << "(" << arg.sig << ")";
                 }
                 cout << endl;
             }
@@ -205,35 +217,33 @@ static void parse_method (xmlNode* root, method_t& method)
     for (xmlNode* node=root; node; node=node->next) {
         if (node->type != XML_ELEMENT_NODE)
             continue;
+        if (strcmp((const char*)node->name, "arg") !=0 )
+            continue;
 
-        string type = (const char*)node->name;
         string name = "";
         string dir = "";
         string signature = "";
 
-        if (type == "arg") {
-            xmlAttr* attr = node->properties;
-            while (attr) {
-                if (attr->name && strcmp((const char*)attr->name, "name")==0) {
-                    if (attr->children && attr->children->content)
-                        name = (const char*)attr->children->content;
-                }
-                if (attr->name && strcmp((const char*)attr->name, "direction")==0) {
-                    if (attr->children && attr->children->content)
-                        dir = (const char*)attr->children->content;
-                }
-                if (attr->name && strcmp((const char*)attr->name, "type")==0) {
-                    if (attr->children && attr->children->content)
-                        signature = (const char*)attr->children->content;
-                }
-                attr = attr->next;
+        for (xmlAttr* attr=node->properties; attr; attr=attr->next) {
+            if (attr->name && strcmp((const char*)attr->name, "name")==0) {
+                if (attr->children && attr->children->content)
+                    name = (const char*)attr->children->content;
             }
-            if (!dir.empty() && !signature.empty()) {
-                if (dir == "out")
-                    method.out = signature;
-                else if (dir == "in") {
-                    method.in.emplace_back (make_pair(name, signature));
-                }
+            else if (attr->name && strcmp((const char*)attr->name, "direction")==0) {
+                if (attr->children && attr->children->content)
+                    dir = (const char*)attr->children->content;
+            }
+            else if (attr->name && strcmp((const char*)attr->name, "type")==0) {
+                if (attr->children && attr->children->content)
+                    signature = (const char*)attr->children->content;
+            }
+        }
+        if (!dir.empty() && !signature.empty()) {
+            if (dir == "out") {
+                method.out.name = name;
+                method.out.sig = signature;
+            }else if (dir == "in") {
+                method.in.emplace_back (name, signature);
             }
         }
     }
@@ -266,7 +276,7 @@ static void parse_signal (xmlNode* root, method_t& signal)
                 attr = attr->next;
             }
             if (!signature.empty())
-                signal.in.emplace_back (make_pair(name, signature));
+                signal.in.emplace_back (name, signature);
         }
     }
 }
