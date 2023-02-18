@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -65,6 +65,8 @@ static constexpr const char* introspect_data =
     "  </interface>\n"
     "  <interface name=\"se.ultramarin.ultrabus.example_service\">\n"
     "    <method name=\"Echo\">\n"
+    "      <arg name=\"value\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"value\" type=\"s\" direction=\"out\"/>\n"
     "    </method>\n"
     "    <method name=\"Log\">\n"
     "      <arg name=\"message\" type=\"s\" direction=\"in\"/>\n"
@@ -78,7 +80,8 @@ static constexpr const char* introspect_data =
 static bool handle_method_call (ubus::Connection& conn, ubus::Message& msg, bool& quit);
 static ubus::Message handle_introspect (ubus::Message& msg);
 static ubus::Message handle_echo (ubus::Message& msg);
-static ubus::Message handle_log (ubus::Message& msg);
+static ubus::Message handle_log (ubus::Connection& conn, ubus::Message& msg);
+static void send_signal (ubus::Connection& conn, const std::string& msg);
 
 
 //------------------------------------------------------------------------------
@@ -123,16 +126,16 @@ int main (int argc, char* argv[])
         {
             return handle_method_call (conn, msg, quit);
         });
-    // Register the object path
+    // Then, register the object path
     oh.register_opath (object_root);
 
     //
     // Service is up and running
     //
-    cout << "Service " << service_name << " started." << endl;
+    cout << "DBus service " << service_name << " started." << endl;
     while (!quit)
         usleep (20000);
-    cout << "Stopping service " << service_name << endl;
+    cout << "Stopping DBUs service " << service_name << endl;
 
     return 0;
 }
@@ -158,7 +161,7 @@ static bool handle_method_call (ubus::Connection& conn, ubus::Message& msg, bool
                 reply = handle_echo (msg);
             }
             else if (msg.name() == "Log") {
-                reply = handle_log (msg);
+                reply = handle_log (conn, msg);
             }
             else if (msg.name() == "Quit") {
                 reply = ubus::Message (msg, false);
@@ -203,7 +206,7 @@ static ubus::Message handle_echo (ubus::Message& msg)
 //------------------------------------------------------------------------------
 // Print a message on standard output of this example service
 //------------------------------------------------------------------------------
-static ubus::Message handle_log (ubus::Message& msg)
+static ubus::Message handle_log (ubus::Connection& conn, ubus::Message& msg)
 {
     ubus::Message reply;
     ubus::dbus_basic log_message;
@@ -212,7 +215,19 @@ static ubus::Message handle_log (ubus::Message& msg)
     }else{
         reply = ubus::Message (msg, false);
         cout << "Message from " << msg.sender() << ": " << log_message.str() << endl;
+        send_signal (conn, log_message.str());
     }
 
     return reply;
+}
+
+
+//------------------------------------------------------------------------------
+// Print a message on standard output of this example service
+//------------------------------------------------------------------------------
+static void send_signal (ubus::Connection& conn, const std::string& msg)
+{
+    ubus::Message signal (object_root, iface_name, "LogMessage");
+    signal << msg;
+    conn.send (signal);
 }
