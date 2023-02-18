@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+# Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
 #
 # This file is part of libultrabus.
 #
@@ -156,7 +156,7 @@ AM_COND_IF([ENABLE_DOXYGEN_SET],
 )
 
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/ultrabus.pc
@@ -164,6 +164,8 @@ AC_OUTPUT([
 	examples/Makefile
 	doc/Makefile
 ])
+
+AC_OUTPUT
 
 
 #
