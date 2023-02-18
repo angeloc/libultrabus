@@ -311,7 +311,7 @@ static void listen_for_signals (ubus::Connection& conn, const appargs_t& opt)
     sa.sa_handler = stop_signal_handler;
     sigaction (SIGINT, &sa, nullptr);
 
-    op.add_signal_callback (opt.iface, opt.name, [](ubus::Message &sig)
+    int result = op.add_signal_callback (opt.iface, opt.name, [](ubus::Message &sig)
         {
             // Called from the connection worker thread
             cout << "Got signal: " << sig.name() << endl;
@@ -324,8 +324,13 @@ static void listen_for_signals (ubus::Connection& conn, const appargs_t& opt)
                 cout << endl;
             }
         });
-    while (continue_sleep_loop)
-        sleep (1);
+    if (result) {
+        cerr << "Error adding signal listener" << endl;
+        exit (1);
+    }else{
+        while (continue_sleep_loop)
+            sleep (1);
+    }
 }
 
 
