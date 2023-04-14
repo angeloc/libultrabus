@@ -49,10 +49,15 @@ Also include unique bus names.
 Instead of already connected names, list all names that can be activated on the bus.
 .RE
 
-.B call <service> <object_path> <interface> <method> [argument ...]
+.B call <service> <object_path> <interface> <method> [signature argument ...]
 .RS 4
 Call a specific method on an object in a DBus service.
-Any returned arguments is printed to standard output.
+Any returned argument is printed to standard output.
+Arguments to the method begins with a DBus signature,
+then the argument value.
+If there is only a single argument, the signature can be
+omitted if the argument is a boolean(true|false), string, or
+a signed integer.
 .RE
 
 .B introspect <service> [object_path]
@@ -81,9 +86,11 @@ Also print the DBus signature of the properties.
 .RE
 
 
-.B set <service> <object_path> <interface> <property> <value>
+.B set <service> <object_path> <interface> <property> [value_signature] <value>
 .RS 4
 Set the property of an object in a DBus service.
+The signature of the value can omitted if the value is a boolean(true|false),
+string, or a signed integer.
 .RE
 
 .B objects <service> [object_path]

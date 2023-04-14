@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+# Copyright (C) 2021,2023 Dan Arrhenius <dan@ultramarin.se>
 #
 # This file is part of libultrabus.
 #
@@ -43,6 +43,7 @@ dbus_tool_SOURCES += dbus-tool-print-introspect.cpp
 dbus_tool_SOURCES += dbus-tool-print-introspect.hpp
 dbus_tool_SOURCES += dbus-tool-args.cpp
 dbus_tool_SOURCES += dbus-tool-args.hpp
+dbus_tool_SOURCES += dbus_arg_parser.cpp
 
 dist_man1_MANS =
 dist_man1_MANS += dbus-tool.man

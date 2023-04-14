@@ -55,9 +55,14 @@ void appargs_t::print_usage_and_exit (ostream& out, int exit_code)
     out << "          -x, --activatable    Instead of already connected names," << endl;
     out << "                               list all names that can be activated on the bus." << endl;
     out << endl;
-    out << "  call <service> <object_path> <interface> <method> [argument ...]" << endl;
+    out << "  call <service> <object_path> <interface> <method> [signature argument ...]" << endl;
     out << "      Call a specific method on an object in a DBus service." << endl;
-    out << "      Any returned arguments is printed to standard output." << endl;
+    out << "      Any returned argument is printed to standard output." << endl;
+    out << "      Arguments to the method begins with a DBus signature," << endl;
+    out << "      then the argument value." << endl;
+    out << "      If there is only a single argument, the signature can be" << endl;
+    out << "      omitted if the argument is a boolean(true|false), string, or" << endl;
+    out << "      a signed integer." << endl;
     out << endl;
     out << "  introspect <service> [object_path]" << endl;
     out << "      Print introspect data for a specific object in a DBus service." << endl;
@@ -71,8 +76,10 @@ void appargs_t::print_usage_and_exit (ostream& out, int exit_code)
     out << "      Options:" << endl;
     out << "          -s, --signature    Print the DBus signature of the properties." << endl;
     out << endl;
-    out << "  set <service> <object_path> <interface> <property> <value>" << endl;
+    out << "  set <service> <object_path> <interface> <property> [value_signature] <value>" << endl;
     out << "      Set the property of an object in a DBus service." << endl;
+    out << "      The signature of the value can omitted if the value is a boolean(true|false)," << endl;
+    out << "      string, or a signed integer." << endl;
     out << endl;
     out << "  objects <service> [object_path]" << endl;
     out << "      List all objects beloning to a specific service and object." << endl;
@@ -231,7 +238,9 @@ appargs_t::appargs_t (int argc, char* argv[])
         opath   = argv[optind++];
         iface   = argv[optind++]; // property interface
         name    = argv[optind++]; // property name
-        args.emplace_back (argv[optind++]); // value
+        args.emplace_back (argv[optind++]); // signature or value
+        if (optind < argc)
+            args.emplace_back (argv[optind++]); // value
     }
     else if (cmd == "objects") {
         if (optind > argc-1) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021,2022 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2021-2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -25,6 +25,7 @@
 
 #include "dbus-tool-args.hpp"
 #include "dbus-tool-print-introspect.hpp"
+#include "dbus_arg_parser.hpp"
 
 namespace ubus = ultrabus;
 using namespace std;
@@ -42,6 +43,9 @@ static void print_owner (ubus::Connection& conn, appargs_t& opt);
 static void print_names (ubus::Connection& conn, appargs_t& opt);
 static void ping (ubus::Connection& conn, appargs_t& opt);
 static void monitor (ubus::Connection& conn, appargs_t& opt);
+
+static std::unique_ptr<ubus::dbus_type> get_single_message_argument (const std::string& arg);
+
 
 
 //------------------------------------------------------------------------------
@@ -142,12 +146,62 @@ static void list_services (ubus::Connection& conn, appargs_t& opt)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+static std::unique_ptr<ubus::dbus_type> get_single_message_argument (const std::string& arg)
+{
+    std::unique_ptr<ubus::dbus_type> retval;
+
+    if (arg == "true") {
+        // Boolean true
+        retval.reset (new ubus::dbus_basic(true));
+    }
+    else if (arg == "false") {
+        // Boolean false
+        retval.reset (new ubus::dbus_basic(false));
+    }
+    else {
+        try {
+            // Signed 32-bit integer
+            retval.reset (new ubus::dbus_basic(std::stoi(arg, nullptr, 0)));
+        }
+        catch (...) {
+            // String
+            retval.reset (new ubus::dbus_basic(arg));
+        }
+    }
+
+    return retval;
+}
+
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 static void call_method (ubus::Connection& conn, const appargs_t& opt)
 {
     ubus::ObjectProxy op (conn, opt.service, opt.opath, opt.iface, opt.timeout);
     ubus::Message msg (opt.service, opt.opath, opt.iface, opt.name);
-    for (auto& arg : opt.args)
-        msg << arg;
+
+    auto num_args = opt.args.size ();
+    if (num_args) {
+        if (num_args == 1) {
+            msg << *get_single_message_argument(opt.args[0]);
+        }
+        else if (num_args & 0x01) {
+            std::cerr << "Error: Invalid argument format, missing signature or value." << std::endl;
+            exit (1);
+        }
+        else{
+            ubus::dbus_arg_parser p;
+            for (size_t i=0; i<num_args; i+=2) {
+                auto value = p (opt.args[i], opt.args[i+1]);
+                if (value) {
+                    msg << *value;
+                }else{
+                    std::cerr << "Error: Invalid argument format." << std::endl;
+                    exit (1);
+                }
+            }
+        }
+    }
 
     auto reply = op.send_msg (msg);
     if (reply.is_error()) {
@@ -249,26 +303,20 @@ static void get_property (ubus::Connection& conn, const appargs_t& opt)
 static void set_property (ubus::Connection& conn, const appargs_t& opt)
 {
     ubus::org_freedesktop_DBus_Properties prop (conn, opt.timeout);
-    ubus::dbus_basic property_value;
+    std::unique_ptr<ubus::dbus_type> property_value;
 
-    if (opt.args[0] == "true") {
-        property_value = true;
+    if (opt.args.size() == 1) {
+        property_value = get_single_message_argument (opt.args[0]);
+    }else{
+        ubus::dbus_arg_parser p;
+        property_value = p (opt.args[0], opt.args[1]);
     }
-    else if (opt.args[0] == "false") {
-        property_value = false;
-    }
-    else{
-        try {
-            // u32 parameter
-            property_value.u32 (std::stoi(opt.args[0]));
-        }
-        catch (...) {
-            // string parameter
-            property_value.str (opt.args[0]);
-        }
+    if (!property_value) {
+        std::cerr << "Error: Invalid argument format." << std::endl;
+        exit (1);
     }
 
-    auto result = prop.set (opt.service, opt.opath, opt.iface, opt.name, property_value);
+    auto result = prop.set (opt.service, opt.opath, opt.iface, opt.name, *property_value);
     if (result.err()) {
         cerr << "Error: " << result.what() << endl;
         exit (1);
