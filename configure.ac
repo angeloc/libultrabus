@@ -112,10 +112,12 @@ AM_COND_IF([ENABLE_UTILS_SET],
 
 
 #
-# Give the user an option to not build example applications
+# Give the user an option to build example applications
 #
 AC_ARG_ENABLE([examples],
-	[AS_HELP_STRING([--disable-examples], [don't build example applications])])
+	[AS_HELP_STRING([--enable-examples],
+	                [build example applications. Example applications are not installed.])],,
+	enable_examples=no)
 AM_CONDITIONAL([ENABLE_EXAMPLES_SET], [test "x$enable_examples" != "xno"])
 
 
@@ -129,11 +131,12 @@ AC_SUBST([PREDEFINED_IN_DOXYGEN])
 
 
 #
-# Give the user an option to build doxygen documentation
+# Give the user an option to disable doxygen documentation
 #
 AC_ARG_ENABLE([doxygen],
-	[AS_HELP_STRING([--enable-doxygen], [build doxygen documentation, if possible])],,
-	enable_doxygen=no)
+	[AS_HELP_STRING([--disable-doxygen],
+	[disable doxygen documentation [default=auto]])],,
+	enable_doxygen=yes)
 AM_CONDITIONAL([ENABLE_DOXYGEN_SET], [test "x$enable_doxygen" != "xno"])
 
 
@@ -176,10 +179,6 @@ AC_MSG_NOTICE([])
 AC_MSG_NOTICE([ Configuration summary:])
 AC_MSG_NOTICE([])
 AC_MSG_NOTICE([ Installation prefix.................. ${prefix}])
-AM_COND_IF([HAVE_DOXYGEN],
-	[AC_MSG_NOTICE([ Generate doxygen documentation....... yes])],
-	[AC_MSG_NOTICE([ Generate doxygen documentation....... no])]
-)
 AM_COND_IF([ENABLE_UTILS_SET],
 	[
 	 AM_COND_IF([HAVE_LIBXML2],
@@ -188,6 +187,10 @@ AM_COND_IF([ENABLE_UTILS_SET],
 		)
 	],
 	[AC_MSG_NOTICE([ Build utilities...................... no])]
+)
+AM_COND_IF([HAVE_DOXYGEN],
+	[AC_MSG_NOTICE([ Generate doxygen documentation....... yes])],
+	[AC_MSG_NOTICE([ Generate doxygen documentation....... no])]
 )
 AM_COND_IF([ENABLE_EXAMPLES_SET],
 	[AC_MSG_NOTICE([ Build example applications........... yes (example applications are not installed)])],
