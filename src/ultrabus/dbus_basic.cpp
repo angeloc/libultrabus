@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -473,7 +473,7 @@ namespace ultrabus {
             ss << str_val;
         }
         else if (sig == DBUS_TYPE_BYTE_AS_STRING)
-            ss << val.byt;
+            ss << (unsigned) val.byt;
         else if (sig == DBUS_TYPE_BOOLEAN_AS_STRING)
             ss << (val.bool_val ? "true" : "false");
         else if (sig == DBUS_TYPE_INT16_AS_STRING)
