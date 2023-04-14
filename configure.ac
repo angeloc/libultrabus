@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-AC_INIT([libultrabus], [0.0.0], [ultrabus@ultramarin.se])
+AC_INIT([libultrabus], [0.0.1], [ultrabus@ultramarin.se])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-bzip2 subdir-objects])
 
 AC_PROG_CC
@@ -35,7 +35,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
 #
-# Release 0.0.0
+# Release 0.0.1
 #
 # Library interface version x:y:z
 #                           | | |
@@ -47,7 +47,7 @@ AM_SILENT_RULES([yes])
 #
 # Library version (CURRENT:REVISION:AGE)
 #
-LIBRARY_VERSION=0:0:0
+LIBRARY_VERSION=0:1:0
 AC_SUBST([LIBRARY_VERSION])
 
 #
