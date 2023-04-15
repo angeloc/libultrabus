@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Dan Arrhenius <dan@ultramarin.se>
+# Copyright (C) 2021,2023 Dan Arrhenius <dan@ultramarin.se>
 #
 # This file is part of libultrabus.
 #
@@ -19,10 +19,6 @@
 ACLOCAL_AMFLAGS=-I m4
 
 SUBDIRS  = src
-
-if ENABLE_UTILS_SET
-SUBDIRS += utils
-endif
 
 if ENABLE_EXAMPLES_SET
 SUBDIRS += examples

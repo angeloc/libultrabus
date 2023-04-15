@@ -23,15 +23,12 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_MKDIR_P
 AC_PROG_INSTALL
-#AC_PROG_YACC
 AM_PROG_AR
-#AM_PROG_LEX
 
 LT_INIT()
 LT_LANG([C++])
 
 AC_CONFIG_MACRO_DIR([m4])
-#AC_CONFIG_HEADERS(src/include/ultrabus/config.h src/include/ultrabus/ultrabus_config.hpp)
 AM_SILENT_RULES([yes])
 
 #
@@ -89,29 +86,6 @@ AC_SUBST([iomultiplex_LIBS])
 
 
 #
-# Give the user an option to not build utilities
-#
-AC_ARG_ENABLE([utils],
-	[AS_HELP_STRING([--disable-utils], [don't build utilities])])
-AM_CONDITIONAL([ENABLE_UTILS_SET], [test "x$enable_utils" != "xno"])
-
-AM_COND_IF([ENABLE_UTILS_SET],
-	[
-	 # Check for libxml2, used to parse dbus introspect data
-	 PKG_CHECK_MODULES([libxml2],
-	     [libxml-2.0],
-	     [AM_CONDITIONAL([HAVE_LIBXML2], true)],
-	     [AC_MSG_WARN(Could not find libxml2 - dbus-tool will not format introspect output);
-	      AM_CONDITIONAL([HAVE_LIBXML2], false)])
-	 AC_SUBST([libxml2_CFLAGS])
-	 AC_SUBST([libxml2_LIBS])
-	],
-	[AM_CONDITIONAL([HAVE_LIBXML2], false)]
-)
-
-
-
-#
 # Give the user an option to build example applications
 #
 AC_ARG_ENABLE([examples],
@@ -163,7 +137,6 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/ultrabus.pc
-	utils/Makefile
 	examples/Makefile
 	doc/Makefile
 ])
@@ -179,15 +152,6 @@ AC_MSG_NOTICE([])
 AC_MSG_NOTICE([ Configuration summary:])
 AC_MSG_NOTICE([])
 AC_MSG_NOTICE([ Installation prefix.................. ${prefix}])
-AM_COND_IF([ENABLE_UTILS_SET],
-	[
-	 AM_COND_IF([HAVE_LIBXML2],
-	 	[AC_MSG_NOTICE([ Build utilities...................... yes])],
-	 	[AC_MSG_NOTICE([ Build utilities...................... yes (libxml2 not found - dbus-tool will not format introspect output)])]
-		)
-	],
-	[AC_MSG_NOTICE([ Build utilities...................... no])]
-)
 AM_COND_IF([HAVE_DOXYGEN],
 	[AC_MSG_NOTICE([ Generate doxygen documentation....... yes])],
 	[AC_MSG_NOTICE([ Generate doxygen documentation....... no])]
