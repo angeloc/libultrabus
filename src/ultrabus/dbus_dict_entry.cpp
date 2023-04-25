@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -237,7 +237,7 @@ namespace ultrabus {
     const std::string dbus_dict_entry::str () const
     {
         std::stringstream ss;
-        ss << '[' << dict_key->str() << ',' << dict_value->str() << ']';
+        ss << '(' << dict_key->str() << ',' << dict_value->str() << ')';
         return ss.str ();
     }
 

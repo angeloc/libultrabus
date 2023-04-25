@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017,2021 Dan Arrhenius <dan@ultramarin.se>
+ * Copyright (C) 2017,2021,2023 Dan Arrhenius <dan@ultramarin.se>
  *
  * This file is part of libultrabus.
  *
@@ -393,13 +393,13 @@ namespace ultrabus {
     const std::string dbus_array::str () const
     {
         std::stringstream ss;
-        ss << '{';
+        ss << '[';
         for (auto i=elements.begin(); i!=elements.end();) {
             ss << (*i)->str ();
             if (++i != elements.end())
                 ss << ',';
         }
-        ss << '}';
+        ss << ']';
         return ss.str ();
     }
 
